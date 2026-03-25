@@ -10,12 +10,46 @@ import bookingRoutes from './routes/bookings.js';
 import reviewRoutes from './routes/reviews.js';
 import adminRoutes from './routes/admin.js';
 import uploadRoutes from './routes/upload.js';
+import messageRoutes from './routes/messages.js';
+
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 
 dotenv.config();
 
 mkdirSync('uploads', { recursive: true });
 
 const app = express();
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    credentials: true
+  }
+});
+
+// Socket.IO logic
+io.on('connection', (socket) => {
+  console.log('🔌 User connected:', socket.id);
+  
+  socket.on('join_booking', (bookingId) => {
+    socket.join(`booking_${bookingId}`);
+    console.log(`User joined room booking_${bookingId}`);
+  });
+
+  // Global user room for overarching push notifications
+  socket.on('join_user', (userId) => {
+    socket.join(`user_${userId}`);
+    console.log(`User joined personal room user_${userId}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('🔴 User disconnected:', socket.id);
+  });
+});
+
+// Make io accessible in routes
+app.set('io', io);
 
 // CORS
 app.use(cors({
@@ -35,6 +69,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/messages', messageRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
@@ -49,6 +84,18 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/navaitour
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server running on http://192.168.x.x:${PORT}`);
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(
+      `Port ${PORT} is already in use. Stop the process using that port or change PORT in your .env file.`
+    );
+    process.exit(1);
+  }
+
+  console.error('Server failed to start:', err);
+  process.exit(1);
+});
+
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server & Socket.IO running on port ${PORT}`);
 });

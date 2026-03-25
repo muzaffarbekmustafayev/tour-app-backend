@@ -78,38 +78,39 @@ const mockHotels = [
   }
 ];
 
+import bcrypt from 'bcryptjs';
+
 const seedDatabase = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/navaitour');
     console.log('MongoDB Connected for seeding');
 
-    const adminUser = await User.findOne({ role: 'ADMIN' });
-    let ownerId = null;
+    let adminUser = await User.findOne({ email: 'a@gmail.com' });
 
-    if (adminUser) {
-      ownerId = adminUser._id;
-    } else {
-      // Create a dummy owner to link hotels correctly if needed
-      const dummyOwner = new User({
-        name: "Admin NavaiTour",
-        email: "admin@navaitour.com",
-        password: "hashedpassword", // Only for seeding
+    if (!adminUser) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash('123456', salt);
+      adminUser = new User({
+        name: "Admin",
+        email: "a@gmail.com",
+        password: hashedPassword,
         role: "ADMIN"
       });
-      await dummyOwner.save();
-      ownerId = dummyOwner._id;
+      await adminUser.save();
+      console.log('Created Admin user a@gmail.com with password 123456');
+    } else {
+      console.log('Admin user a@gmail.com already exists');
     }
 
     const hotelCount = await Hotel.countDocuments();
-    if (hotelCount === 0) {
-      console.log('No hotels found. Seeding initial data...');
+    if (hotelCount === 0 || hotelCount > 0) {
+      await Hotel.deleteMany({});
+      console.log('Cleared existing hotels. Seeding fresh fake data...');
       
-      const hotelsData = mockHotels.map(h => ({ ...h, owner: ownerId }));
+      const hotelsData = mockHotels.map(h => ({ ...h, owner: adminUser._id }));
       await Hotel.insertMany(hotelsData);
       
-      console.log('Successfully seeded hotels!');
-    } else {
-      console.log('Database already contains hotels. Skipping seed.');
+      console.log('Successfully seeded properties!');
     }
 
     process.exit();

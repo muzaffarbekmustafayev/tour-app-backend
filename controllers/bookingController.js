@@ -5,46 +5,75 @@ export const createBooking = async (req, res) => {
   try {
     const {
       hotelId,
-      hotel,
-      roomType,
+      roomId,
       checkInDate,
       checkOutDate,
-      totalPrice,
       guestsCount,
-      numberOfGuests,
       paymentMethod,
-      specialRequests
+      specialRequests,
+      upsells
     } = req.body;
-    const resolvedHotelId = hotelId || hotel;
     
-    const targetHotel = await Hotel.findById(resolvedHotelId);
+    const targetHotel = await Hotel.findById(hotelId);
     if (!targetHotel) return res.status(404).json({ message: 'Hotel not found' });
     
-    if (targetHotel.roomsAvailable < 1) {
-      return res.status(400).json({ message: 'No rooms available' });
+    const targetRoom = targetHotel.rooms.id(roomId);
+    if (!targetRoom) return res.status(404).json({ message: 'Room not found' });
+
+    if (targetRoom.roomsAvailable < 1) {
+      return res.status(400).json({ message: 'No rooms available for this category' });
+    }
+
+    if (guestsCount > targetRoom.capacity) {
+        // According to TZ: Kam kishi katta xona olishi mumkin. Lekin katta guruh kichik xonaga sig'maydi.
+        return res.status(400).json({ message: 'Room capacity is smaller than guest count' });
     }
 
     const startDate = new Date(checkInDate);
     const endDate = new Date(checkOutDate);
     const nights = Math.max(1, Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)));
-    const computedTotalPrice = totalPrice || nights * Number(targetHotel.pricePerNight || 0);
+    
+    // Dynamic Pricing Logic (Weekend Markups)
+    let currentDay = new Date(startDate);
+    let computedTotalPrice = 0;
+    
+    while(currentDay < endDate) {
+      let dailyPrice = targetRoom.pricePerNight;
+      
+      // If weekend (Friday, Saturday)
+      if (currentDay.getDay() === 5 || currentDay.getDay() === 6) {
+         const markupPercent = targetHotel.dynamicPricing?.weekendMarkupPercent || 0;
+         dailyPrice += (dailyPrice * markupPercent) / 100;
+      }
+      
+      computedTotalPrice += dailyPrice;
+      currentDay.setDate(currentDay.getDate() + 1);
+    }
+
+    // Upsell Costs
+    if (upsells?.breakfast) computedTotalPrice += (15 * guestsCount * nights); // Dummy flat price
+    if (upsells?.airportTransfer) computedTotalPrice += 50; 
+    if (upsells?.extraBed) computedTotalPrice += (20 * nights);
 
     const booking = new Booking({
-      hotel: resolvedHotelId,
+      hotel: hotelId,
       user: req.user.id,
-      roomType,
+      roomId,
       checkInDate,
       checkOutDate,
       totalPrice: computedTotalPrice,
       nights,
-      guestsCount: Number(guestsCount || numberOfGuests || 1),
+      guestsCount,
       paymentMethod,
-      specialRequests
+      upsells,
+      specialRequests,
+      cancellationPolicy: targetHotel.policies?.cancellation || 'free'
     });
 
     await booking.save();
     
-    targetHotel.roomsAvailable -= 1;
+    // Decrement inventory
+    targetRoom.roomsAvailable -= 1;
     targetHotel.statistics.bookingsThisMonth += 1;
     await targetHotel.save();
 
@@ -57,7 +86,7 @@ export const createBooking = async (req, res) => {
 export const getMyBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({ user: req.user.id })
-      .populate('hotel', 'name city images')
+      .populate('hotel', 'name city images rooms')
       .sort('-createdAt');
     res.json(bookings);
   } catch (error) {
@@ -95,16 +124,19 @@ export const cancelBooking = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    if (booking.status === 'cancelled') {
-      return res.json(booking);
+    if (booking.status === 'cancelled') return res.json(booking);
+
+    if (booking.cancellationPolicy === 'non-refundable' && req.user.role === 'CUSTOMER') {
+      return res.status(400).json({ message: 'This booking is non-refundable.' });
     }
 
     booking.status = 'cancelled';
     await booking.save();
 
-    const hotel = await Hotel.findById(booking.hotel);
+    const hotel = await Hotel.findById(booking.hotel._id);
     if (hotel) {
-      hotel.roomsAvailable += 1;
+      const room = hotel.rooms.id(booking.roomId);
+      if (room) room.roomsAvailable += 1;
       await hotel.save();
     }
 

@@ -10,6 +10,12 @@ const userSchema = new mongoose.Schema({
     default: 'CUSTOMER'
   },
   phone: String,
+  verification: {
+    phoneVerified: { type: Boolean, default: false },
+    emailVerified: { type: Boolean, default: false },
+    identityVerified: { type: Boolean, default: false },
+    passportOrIdUrl: String
+  },
   favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Hotel' }],
   blocked: { type: Boolean, default: false }
 }, { timestamps: true });

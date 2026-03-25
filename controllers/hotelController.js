@@ -7,56 +7,61 @@ export const getAllHotels = async (req, res) => {
       city,
       minPrice,
       maxPrice,
-      priceMin,
-      priceMax,
       stars,
-      starRating,
       minRating,
       amenities,
       accessibility,
       category,
+      roomCategory,
+      capacity,
       page = 1,
       limit = 10,
       sortBy = 'createdAt',
       order = 'desc'
     } = req.query;
     
-    let filter = { approved: true };
+    let filter = {};
     
     if (search) {
       filter.$or = [
         { name: new RegExp(search, 'i') },
-        { city: new RegExp(search, 'i') },
-        { address: new RegExp(search, 'i') },
-        { country: new RegExp(search, 'i') }
+        { city: new RegExp(search, 'i') }
       ];
     }
     if (city) filter.city = new RegExp(city, 'i');
-    if (stars || starRating) filter.stars = parseInt(stars || starRating, 10);
+    if (stars) filter.stars = parseInt(stars, 10);
     if (category) filter.category = category;
     if (minRating) filter.rating = { $gte: parseFloat(minRating) };
-    if (priceMin || priceMax || minPrice || maxPrice) {
-      filter.pricePerNight = {};
-      if (priceMin || minPrice) filter.pricePerNight.$gte = parseInt(priceMin || minPrice, 10);
-      if (priceMax || maxPrice) filter.pricePerNight.$lte = parseInt(priceMax || maxPrice, 10);
+    
+    // Search by base price OR room price
+    if (minPrice || maxPrice) {
+      filter.$or = filter.$or || [];
+      const priceFilter = {};
+      if (minPrice) priceFilter.$gte = parseInt(minPrice, 10);
+      if (maxPrice) priceFilter.$lte = parseInt(maxPrice, 10);
+      
+      filter.$or.push({ basePricePerNight: priceFilter });
+      filter.$or.push({ 'rooms.pricePerNight': priceFilter });
     }
+
+    if (capacity || roomCategory) {
+      const roomMatch = {};
+      if (capacity) roomMatch['capacity'] = { $gte: parseInt(capacity, 10) };
+      if (roomCategory) roomMatch['category'] = roomCategory;
+      filter.rooms = { $elemMatch: roomMatch };
+    }
+
     if (amenities) {
-      const amenitiesArray = Array.isArray(amenities)
-        ? amenities
-        : String(amenities).split(',');
+      const amenitiesArray = String(amenities).split(',');
       filter.amenities = { $all: amenitiesArray };
     }
+    
     if (accessibility) {
-      const features = Array.isArray(accessibility)
-        ? accessibility
-        : String(accessibility).split(',');
+      const features = String(accessibility).split(',');
       for (const feature of features) {
         if (feature === 'wheelchair') filter['accessibility.wheelchairAccessible'] = true;
         if (feature === 'elevator') filter['accessibility.elevator'] = true;
         if (feature === 'rooms') filter['accessibility.accessibleRooms'] = true;
-        if (feature === 'braille') filter['accessibility.brailleSigns'] = true;
-        if (feature === 'hearing') filter['accessibility.hearingAssistance'] = true;
-        if (feature === 'parking') filter['accessibility.specialParking'] = true;
       }
     }
 
@@ -64,15 +69,18 @@ export const getAllHotels = async (req, res) => {
     const limitNum = parseInt(limit, 10) || 10;
     const skip = (pageNum - 1) * limitNum;
 
-    // Use .sort({ [sortBy]: order === 'desc' ? -1 : 1 }) later if needed
     const hotels = await Hotel.find(filter)
       .populate('owner', 'name email')
+      .sort({ [sortBy]: order === 'desc' ? -1 : 1 })
       .skip(skip)
       .limit(limitNum);
       
     const total = await Hotel.countDocuments(filter);
 
-    res.json(hotels); // Kept array response for backward compatibility with frontend, normally we would return object
+    res.json({
+      data: hotels,
+      pagination: { total, page: pageNum, pages: Math.ceil(total / limitNum) }
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -90,19 +98,8 @@ export const getHotelById = async (req, res) => {
 
 export const createHotel = async (req, res) => {
   try {
-    const normalizedBody = {
-      ...req.body,
-      stars: Number(req.body.stars || req.body.starRating || 0) || undefined,
-      roomsAvailable: Number(req.body.roomsAvailable || req.body.totalRooms || 0) || 0,
-      totalRooms: Number(req.body.totalRooms || req.body.roomsAvailable || 0) || 0,
-      pricePerNight: Number(req.body.pricePerNight || 0),
-      city: req.body.city || req.body.location?.city,
-      country: req.body.country || req.body.location?.country,
-      address: req.body.address || req.body.location?.address
-    };
-
     const hotel = new Hotel({
-      ...normalizedBody,
+      ...req.body,
       owner: req.user.id
     });
     await hotel.save();
@@ -121,13 +118,7 @@ export const updateHotel = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    Object.assign(hotel, {
-      ...req.body,
-      stars: Number(req.body.stars || req.body.starRating || hotel.stars || 0) || hotel.stars,
-      city: req.body.city || req.body.location?.city || hotel.city,
-      country: req.body.country || req.body.location?.country || hotel.country,
-      address: req.body.address || req.body.location?.address || hotel.address
-    });
+    Object.assign(hotel, req.body);
     await hotel.save();
     res.json(hotel);
   } catch (error) {
@@ -145,7 +136,7 @@ export const deleteHotel = async (req, res) => {
     }
 
     await hotel.deleteOne();
-    res.json({ message: 'Hotel deleted' });
+    res.json({ message: 'Hotel deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -176,15 +167,21 @@ export const approveHotel = async (req, res) => {
 export const checkAvailability = async (req, res) => {
   try {
     const { id } = req.params;
-    const { checkIn, checkOut, guests } = req.query;
+    const { roomId, checkIn, checkOut, guests } = req.query;
 
     const hotel = await Hotel.findById(id);
     if (!hotel) return res.status(404).json({ message: 'Hotel not found' });
 
-    // In a real application, you'd check bookings in this date range
-    // For now we check if there are any rooms available globally
-    if (hotel.roomsAvailable > 0) {
-      res.json({ available: true, pricePerNight: hotel.pricePerNight, roomsAvailable: hotel.roomsAvailable });
+    let roomToCheck = null;
+    if (roomId) {
+      roomToCheck = hotel.rooms.id(roomId);
+      if (!roomToCheck) return res.status(404).json({ message: 'Room not found in this hotel' });
+    }
+
+    const checkAvailable = roomToCheck ? roomToCheck.roomsAvailable > 0 : hotel.rooms.some(r => r.roomsAvailable > 0);
+
+    if (checkAvailable) {
+      res.json({ available: true, hotelId: hotel._id, roomId: roomToCheck?._id });
     } else {
       res.json({ available: false, message: 'No rooms available for the selected dates' });
     }

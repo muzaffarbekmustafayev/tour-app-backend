@@ -23,7 +23,8 @@ export const removeFavorite = async (req, res) => {
 export const getFavorites = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).populate('favorites');
-    res.json(user.favorites || []);
+    const validFavorites = (user.favorites || []).filter(fav => fav != null);
+    res.json(validFavorites);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

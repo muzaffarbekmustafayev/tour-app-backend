@@ -1,5 +1,29 @@
 import mongoose from 'mongoose';
 
+const roomSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  roomType: { 
+    type: String, 
+    enum: ['Single Room', 'Double Room', 'Triple Room', 'Quad Room', 'Family Room'],
+    required: true
+  },
+  category: { 
+    type: String, 
+    enum: ['Standard', 'Comfort', 'Deluxe', 'Suite', 'Luxury / VIP'],
+    required: true
+  },
+  capacity: { type: Number, required: true },
+  pricePerNight: { type: Number, required: true },
+  roomsAvailable: { type: Number, required: true },
+  totalRooms: { type: Number, required: true },
+  areaSqMeters: Number,
+  bedType: { type: String, enum: ['single bed', 'double bed', 'king size'] },
+  amenities: [String],
+  bathroomType: { type: String, enum: ['private', 'shared'] },
+  hasBalcony: { type: Boolean, default: false },
+  images: [String]
+});
+
 const hotelSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: String,
@@ -31,7 +55,12 @@ const hotelSchema = new mongoose.Schema({
   },
   category: { type: String, enum: ['hotel', 'resort', 'hostel'] },
   stars: { type: Number, min: 1, max: 5 },
-  pricePerNight: Number,
+  basePricePerNight: Number,
+  dynamicPricing: {
+    weekendMarkupPercent: { type: Number, default: 0 },
+    holidayMarkupPercent: { type: Number, default: 0 },
+    lowSeasonDiscountPercent: { type: Number, default: 0 }
+  },
   discount: {
     active: Boolean,
     percent: Number,
@@ -41,9 +70,7 @@ const hotelSchema = new mongoose.Schema({
     season: String,
     price: Number
   }],
-  roomsAvailable: Number,
-  totalRooms: Number,
-  maxGuests: Number,
+  rooms: [roomSchema],
   checkIn: String,
   checkOut: String,
   openingYear: Number,
@@ -55,18 +82,10 @@ const hotelSchema = new mongoose.Schema({
     website: String
   },
   amenities: [String],
-  roomTypes: [{
-    type: String,
-    price: Number,
-    capacity: Number,
-    roomsAvailable: Number,
-    totalRooms: Number,
-    amenities: [String]
-  }],
   policies: {
     petsAllowed: Boolean,
     smokingAllowed: Boolean,
-    cancellation: String
+    cancellation: { type: String, enum: ['free', 'non-refundable', 'partial'] }
   },
   security: [String],
   accessibility: {
@@ -80,7 +99,10 @@ const hotelSchema = new mongoose.Schema({
   nearbyPlaces: [String],
   tags: [String],
   features: [String],
-  paymentMethods: [String],
+  paymentMethods: [{
+    type: String, 
+    enum: ['Click', 'Payme', 'Uzum Bank', 'Stripe', 'Visa', 'MasterCard', 'Cash']
+  }],
   statistics: {
     bookingsThisMonth: { type: Number, default: 0 },
     occupancyRate: String,
