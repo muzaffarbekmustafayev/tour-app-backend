@@ -56,7 +56,7 @@ export const updateProfile = async (req, res) => {
 
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, phone } = req.body;
     
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -69,7 +69,8 @@ export const register = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role: role || 'CUSTOMER'
+      role: role || 'CUSTOMER',
+      phone
     });
 
     await user.save();

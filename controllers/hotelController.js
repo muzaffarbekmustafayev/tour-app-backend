@@ -1,4 +1,5 @@
 import Hotel from '../models/Hotel.js';
+import User from '../models/User.js';
 
 export const getAllHotels = async (req, res) => {
   try {
@@ -70,7 +71,7 @@ export const getAllHotels = async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
 
     const hotels = await Hotel.find(filter)
-      .populate('owner', 'name email')
+      .populate('owner', 'name email phone')
       .sort({ [sortBy]: order === 'desc' ? -1 : 1 })
       .skip(skip)
       .limit(limitNum);
@@ -88,7 +89,7 @@ export const getAllHotels = async (req, res) => {
 
 export const getHotelById = async (req, res) => {
   try {
-    const hotel = await Hotel.findById(req.params.id).populate('owner', 'name email');
+    const hotel = await Hotel.findById(req.params.id).populate('owner', 'name email phone');
     if (!hotel) return res.status(404).json({ message: 'Hotel not found' });
     res.json(hotel);
   } catch (error) {
@@ -98,11 +99,30 @@ export const getHotelById = async (req, res) => {
 
 export const createHotel = async (req, res) => {
   try {
+    let ownerId = req.user.id;
+
+    if (req.user.role === 'ADMIN' && req.body.owner) {
+      const ownerUser = await User.findById(req.body.owner);
+      if (!ownerUser || ownerUser.role !== 'HOTEL_OWNER') {
+        return res.status(400).json({ message: 'Invalid owner: must be an existing hotel owner' });
+      }
+      ownerId = req.body.owner;
+    }
+
+    const hotelData = { ...req.body };
+    delete hotelData.owner;
+
+    // Handle price alias for robustness
+    if (hotelData.pricePerNight && !hotelData.basePricePerNight) {
+      hotelData.basePricePerNight = hotelData.pricePerNight;
+    }
+
     const hotel = new Hotel({
-      ...req.body,
-      owner: req.user.id
+      ...hotelData,
+      owner: ownerId
     });
     await hotel.save();
+
     res.status(201).json(hotel);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -118,8 +138,15 @@ export const updateHotel = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    Object.assign(hotel, req.body);
+    const updateData = { ...req.body };
+    // Handle price alias
+    if (updateData.pricePerNight && !updateData.basePricePerNight) {
+      updateData.basePricePerNight = updateData.pricePerNight;
+    }
+
+    Object.assign(hotel, updateData);
     await hotel.save();
+
     res.json(hotel);
   } catch (error) {
     res.status(400).json({ message: error.message });
