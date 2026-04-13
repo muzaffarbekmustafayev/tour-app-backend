@@ -2,13 +2,13 @@ import mongoose from 'mongoose';
 
 const roomSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  roomType: { 
-    type: String, 
+  roomType: {
+    type: String,
     enum: ['Single Room', 'Double Room', 'Triple Room', 'Quad Room', 'Family Room'],
     required: true
   },
-  category: { 
-    type: String, 
+  category: {
+    type: String,
     enum: ['Standard', 'Comfort', 'Deluxe', 'Suite', 'Luxury / VIP'],
     required: true
   },
@@ -21,13 +21,36 @@ const roomSchema = new mongoose.Schema({
   amenities: [String],
   bathroomType: { type: String, enum: ['private', 'shared'] },
   hasBalcony: { type: Boolean, default: false },
-  images: [String]
+  images: [String],
+  roomAccessibility: {
+    hasEmergencyCord: { type: Boolean, default: false },
+    grabBars: { type: Boolean, default: false },
+    wideDoorways: { type: Boolean, default: false },
+    visualAlarms: { type: Boolean, default: false },
+    rollInShower: { type: Boolean, default: false },
+    lowerBedHeight: { type: Boolean, default: false }
+  }
 });
 
 const hotelSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  description: String,
-  descriptionShort: String,
+  name: {
+    uz: { type: String, required: true },
+    qr: String,
+    ru: String,
+    en: String
+  },
+  description: {
+    uz: String,
+    qr: String,
+    ru: String,
+    en: String
+  },
+  descriptionShort: {
+    uz: String,
+    qr: String,
+    ru: String,
+    en: String
+  },
   hotelChain: String,
   images: [String],
   videoTour: String,
@@ -89,19 +112,59 @@ const hotelSchema = new mongoose.Schema({
   },
   security: [String],
   accessibility: {
-    wheelchairAccessible: Boolean,
-    elevator: Boolean,
-    accessibleRooms: Boolean,
-    brailleSigns: Boolean,
-    hearingAssistance: Boolean,
-    specialParking: Boolean
+    mobility: {
+      wheelchairAccessible: { type: Boolean, default: false },
+      stepFreeRoute: { type: Boolean, default: false },
+      rampSlopeDegree: { type: Number, min: 0, max: 15 },
+      elevatorWidthCm: { type: Number, min: 0, max: 500 },
+      accessibleRooms: { type: Boolean, default: false },
+      accessibleParking: { type: Boolean, default: false },
+      accessibleToilet: { type: Boolean, default: false }
+    },
+    visual: {
+      brailleSigns: { type: Boolean, default: false },
+      tactilePaving: { type: Boolean, default: false },
+      highContrastSignage: { type: Boolean, default: false }
+    },
+    auditory: {
+      audioGuides: { type: Boolean, default: false },
+      hearingLoop: { type: Boolean, default: false },
+      vibrationAlerts: { type: Boolean, default: false },
+      signLanguageStaff: { type: Boolean, default: false }
+    },
+    cognitive: {
+      quietZones: { type: Boolean, default: false },
+      easyToReadSignage: { type: Boolean, default: false },
+      consistentLayout: { type: Boolean, default: false },
+      sensoryFriendlyHours: { type: Boolean, default: false }
+    },
+    support: {
+      serviceAnimalFriendly: { type: Boolean, default: false },
+      supportPersonPolicy: { type: Boolean, default: false },
+      supportContact: String
+    }
+  },
+  familyAndElderly: {
+    strollerAccessible: { type: Boolean, default: false },
+    medicalServiceOnSite: { type: Boolean, default: false },
+    nursingRoom: { type: Boolean, default: false },
+    orthopedicBeddingAvailable: { type: Boolean, default: false },
+    grabBarsInBathroom: { type: Boolean, default: false }
+  },
+  digitalInclusion: {
+    lowResImagePlaceholder: String,
+    isPwaCompatible: { type: Boolean, default: true },
+    offlineDataSupport: { type: Boolean, default: true },
+    lowDataMode: { type: Boolean, default: false },
+    captionedVideoTour: { type: Boolean, default: false },
+    screenReaderDescription: String
   },
   nearbyPlaces: [String],
   tags: [String],
   features: [String],
   paymentMethods: [{
-    type: String, 
-    enum: ['Click', 'Payme', 'Uzum Bank', 'Stripe', 'Visa', 'MasterCard', 'Cash']
+    type: String,
+    enum: ['Click', 'Payme', 'Uzum Bank', 'Stripe', 'Visa', 'MasterCard', 'Cash', 'Installment']
   }],
   statistics: {
     bookingsThisMonth: { type: Number, default: 0 },
@@ -119,5 +182,17 @@ const hotelSchema = new mongoose.Schema({
     default: 'pending'
   }
 }, { timestamps: true });
+
+hotelSchema.index({ 'name.uz': 'text', 'name.qr': 'text', 'name.ru': 'text', tags: 'text' });
+hotelSchema.index({ 'accessibility.mobility.wheelchairAccessible': 1 });
+hotelSchema.index({ 'accessibility.mobility.stepFreeRoute': 1 });
+hotelSchema.index({ 'accessibility.visual.brailleSigns': 1 });
+hotelSchema.index({ 'accessibility.auditory.audioGuides': 1 });
+hotelSchema.index({ 'accessibility.auditory.hearingLoop': 1 });
+hotelSchema.index({ 'accessibility.cognitive.quietZones': 1 });
+hotelSchema.index({ 'accessibility.support.serviceAnimalFriendly': 1 });
+hotelSchema.index({ 'familyAndElderly.strollerAccessible': 1 });
+hotelSchema.index({ 'digitalInclusion.offlineDataSupport': 1 });
+hotelSchema.index({ city: 1, stars: 1, basePricePerNight: 1 });
 
 export default mongoose.model('Hotel', hotelSchema);

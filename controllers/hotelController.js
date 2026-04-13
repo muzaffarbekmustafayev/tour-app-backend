@@ -1,87 +1,30 @@
 import Hotel from '../models/Hotel.js';
-import User from '../models/User.js';
 
 export const getAllHotels = async (req, res) => {
   try {
-    const {
-      search,
-      city,
-      minPrice,
-      maxPrice,
-      stars,
-      minRating,
-      amenities,
-      accessibility,
-      category,
-      roomCategory,
-      capacity,
-      page = 1,
-      limit = 10,
-      sortBy = 'createdAt',
-      order = 'desc'
-    } = req.query;
+    const { city, stars, minPrice, maxPrice, category, search } = req.query;
     
-    let filter = {};
+    let query = { approved: true };
+
+    if (city) query.city = new RegExp(city, 'i');
+    if (stars) query.stars = Number(stars);
+    if (category) query.category = category;
     
-    if (search) {
-      filter.$or = [
-        { name: new RegExp(search, 'i') },
-        { city: new RegExp(search, 'i') }
-      ];
-    }
-    if (city) filter.city = new RegExp(city, 'i');
-    if (stars) filter.stars = parseInt(stars, 10);
-    if (category) filter.category = category;
-    if (minRating) filter.rating = { $gte: parseFloat(minRating) };
-    
-    // Search by base price OR room price
     if (minPrice || maxPrice) {
-      filter.$or = filter.$or || [];
-      const priceFilter = {};
-      if (minPrice) priceFilter.$gte = parseInt(minPrice, 10);
-      if (maxPrice) priceFilter.$lte = parseInt(maxPrice, 10);
-      
-      filter.$or.push({ basePricePerNight: priceFilter });
-      filter.$or.push({ 'rooms.pricePerNight': priceFilter });
+      query.basePricePerNight = {};
+      if (minPrice) query.basePricePerNight.$gte = Number(minPrice);
+      if (maxPrice) query.basePricePerNight.$lte = Number(maxPrice);
     }
 
-    if (capacity || roomCategory) {
-      const roomMatch = {};
-      if (capacity) roomMatch['capacity'] = { $gte: parseInt(capacity, 10) };
-      if (roomCategory) roomMatch['category'] = roomCategory;
-      filter.rooms = { $elemMatch: roomMatch };
+    if (search) {
+      query.$text = { $search: search };
     }
 
-    if (amenities) {
-      const amenitiesArray = String(amenities).split(',');
-      filter.amenities = { $all: amenitiesArray };
-    }
+    const hotels = await Hotel.find(query)
+      .sort('-createdAt')
+      .select('-owner');
     
-    if (accessibility) {
-      const features = String(accessibility).split(',');
-      for (const feature of features) {
-        if (feature === 'wheelchair') filter['accessibility.wheelchairAccessible'] = true;
-        if (feature === 'elevator') filter['accessibility.elevator'] = true;
-        if (feature === 'rooms') filter['accessibility.accessibleRooms'] = true;
-      }
-    }
-
-    const pageNum = parseInt(page, 10) || 1;
-    const limitNum = parseInt(limit, 10) || 10;
-    const skip = (pageNum - 1) * limitNum;
-
-    const hotels = await Hotel.find(filter)
-      .populate('owner', 'name email phone')
-      .sort({ [sortBy]: order === 'desc' ? -1 : 1 })
-      .skip(skip)
-      .limit(limitNum);
-      
-    const total = await Hotel.countDocuments(filter);
-
-    res.json({
-      data: hotels,
-      pagination: { total, page: pageNum, pages: Math.ceil(total / limitNum) }
-    });
+    res.json(hotels);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -89,8 +32,13 @@ export const getAllHotels = async (req, res) => {
 
 export const getHotelById = async (req, res) => {
   try {
-    const hotel = await Hotel.findById(req.params.id).populate('owner', 'name email phone');
-    if (!hotel) return res.status(404).json({ message: 'Hotel not found' });
+    const hotel = await Hotel.findById(req.params.id)
+      .populate('owner', 'name email phone');
+    
+    if (!hotel) {
+      return res.status(404).json({ message: 'Hotel not found' });
+    }
+    
     res.json(hotel);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -99,30 +47,15 @@ export const getHotelById = async (req, res) => {
 
 export const createHotel = async (req, res) => {
   try {
-    let ownerId = req.user.id;
+    const hotelData = {
+      ...req.body,
+      owner: req.user.id,
+      approved: req.user.role === 'ADMIN' // Auto-approve if created by Admin
+    };
 
-    if (req.user.role === 'ADMIN' && req.body.owner) {
-      const ownerUser = await User.findById(req.body.owner);
-      if (!ownerUser || ownerUser.role !== 'HOTEL_OWNER') {
-        return res.status(400).json({ message: 'Invalid owner: must be an existing hotel owner' });
-      }
-      ownerId = req.body.owner;
-    }
-
-    const hotelData = { ...req.body };
-    delete hotelData.owner;
-
-    // Handle price alias for robustness
-    if (hotelData.pricePerNight && !hotelData.basePricePerNight) {
-      hotelData.basePricePerNight = hotelData.pricePerNight;
-    }
-
-    const hotel = new Hotel({
-      ...hotelData,
-      owner: ownerId
-    });
+    const hotel = new Hotel(hotelData);
     await hotel.save();
-
+    
     res.status(201).json(hotel);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -132,22 +65,23 @@ export const createHotel = async (req, res) => {
 export const updateHotel = async (req, res) => {
   try {
     const hotel = await Hotel.findById(req.params.id);
-    if (!hotel) return res.status(404).json({ message: 'Hotel not found' });
     
-    if (req.user.role !== 'ADMIN' && hotel.owner.toString() !== req.user.id) {
+    if (!hotel) {
+      return res.status(404).json({ message: 'Hotel not found' });
+    }
+
+    // Check ownership or admin role
+    if (hotel.owner.toString() !== req.user.id && req.user.role !== 'ADMIN') {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    const updateData = { ...req.body };
-    // Handle price alias
-    if (updateData.pricePerNight && !updateData.basePricePerNight) {
-      updateData.basePricePerNight = updateData.pricePerNight;
-    }
+    const updatedHotel = await Hotel.findByIdAndUpdate(
+      req.params.id,
+      { ...req.body, approved: hotel.approved }, // Prevent bypassing approval via update
+      { new: true, runValidators: true }
+    );
 
-    Object.assign(hotel, updateData);
-    await hotel.save();
-
-    res.json(hotel);
+    res.json(updatedHotel);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -156,23 +90,18 @@ export const updateHotel = async (req, res) => {
 export const deleteHotel = async (req, res) => {
   try {
     const hotel = await Hotel.findById(req.params.id);
-    if (!hotel) return res.status(404).json({ message: 'Hotel not found' });
-    
-    if (req.user.role !== 'ADMIN' && hotel.owner.toString() !== req.user.id) {
+
+    if (!hotel) {
+      return res.status(404).json({ message: 'Hotel not found' });
+    }
+
+    // Check ownership or admin role
+    if (hotel.owner.toString() !== req.user.id && req.user.role !== 'ADMIN') {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    await hotel.deleteOne();
+    await Hotel.findByIdAndDelete(req.params.id);
     res.json({ message: 'Hotel deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const getOwnerHotels = async (req, res) => {
-  try {
-    const hotels = await Hotel.find({ owner: req.user.id });
-    res.json(hotels);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -185,7 +114,22 @@ export const approveHotel = async (req, res) => {
       { approved: true, moderationStatus: 'approved' },
       { new: true }
     );
+
+    if (!hotel) {
+      return res.status(404).json({ message: 'Hotel not found' });
+    }
+
     res.json(hotel);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getOwnerHotels = async (req, res) => {
+  try {
+    const hotels = await Hotel.find({ owner: req.user.id })
+      .sort('-createdAt');
+    res.json(hotels);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -193,25 +137,22 @@ export const approveHotel = async (req, res) => {
 
 export const checkAvailability = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { roomId, checkIn, checkOut, guests } = req.query;
-
-    const hotel = await Hotel.findById(id);
-    if (!hotel) return res.status(404).json({ message: 'Hotel not found' });
-
-    let roomToCheck = null;
-    if (roomId) {
-      roomToCheck = hotel.rooms.id(roomId);
-      if (!roomToCheck) return res.status(404).json({ message: 'Room not found in this hotel' });
+    const hotel = await Hotel.findById(req.params.id);
+    if (!hotel) {
+      return res.status(404).json({ message: 'Hotel not found' });
     }
 
-    const checkAvailable = roomToCheck ? roomToCheck.roomsAvailable > 0 : hotel.rooms.some(r => r.roomsAvailable > 0);
-
-    if (checkAvailable) {
-      res.json({ available: true, hotelId: hotel._id, roomId: roomToCheck?._id });
-    } else {
-      res.json({ available: false, message: 'No rooms available for the selected dates' });
-    }
+    const availableRooms = hotel.rooms.filter(room => room.roomsAvailable > 0);
+    res.json({
+      hotelId: hotel._id,
+      available: availableRooms.length > 0,
+      rooms: availableRooms.map(r => ({
+        id: r._id,
+        name: r.name,
+        available: r.roomsAvailable,
+        price: r.pricePerNight
+      }))
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
