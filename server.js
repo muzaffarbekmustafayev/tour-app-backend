@@ -7,7 +7,7 @@ import { mkdirSync } from 'fs';
 
 import authRoutes from './routes/auth.js';
 import hotelRoutes from './routes/hotels.js';
-import bookingRoutes from './routes/bookings.js';
+// import bookingRoutes from './routes/bookings.js';
 import reviewRoutes from './routes/reviews.js';
 import adminRoutes from './routes/admin.js';
 import uploadRoutes from './routes/upload.js';
@@ -128,7 +128,7 @@ app.use('/api/docs', swaggerUi.serve, (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/hotels', hotelRoutes);
-app.use('/api/bookings', bookingRoutes);
+// app.use('/api/bookings', bookingRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);

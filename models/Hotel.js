@@ -33,24 +33,9 @@ const roomSchema = new mongoose.Schema({
 });
 
 const hotelSchema = new mongoose.Schema({
-  name: {
-    uz: { type: String, required: true },
-    qr: String,
-    ru: String,
-    en: String
-  },
-  description: {
-    uz: String,
-    qr: String,
-    ru: String,
-    en: String
-  },
-  descriptionShort: {
-    uz: String,
-    qr: String,
-    ru: String,
-    en: String
-  },
+  name: { type: String, required: true },
+  description: String,
+  descriptionShort: String,
   hotelChain: String,
   images: [String],
   videoTour: String,
@@ -183,7 +168,7 @@ const hotelSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-hotelSchema.index({ 'name.uz': 'text', 'name.qr': 'text', 'name.ru': 'text', tags: 'text' });
+hotelSchema.index({ name: 'text', tags: 'text' });
 hotelSchema.index({ 'accessibility.mobility.wheelchairAccessible': 1 });
 hotelSchema.index({ 'accessibility.mobility.stepFreeRoute': 1 });
 hotelSchema.index({ 'accessibility.visual.brailleSigns': 1 });
