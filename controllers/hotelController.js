@@ -47,10 +47,11 @@ export const getHotelById = async (req, res) => {
 
 export const createHotel = async (req, res) => {
   try {
+    const isAdmin = req.user.role === 'ADMIN';
     const hotelData = {
       ...req.body,
-      owner: req.user.id,
-      approved: req.user.role === 'ADMIN' // Auto-approve if created by Admin
+      owner: (isAdmin && req.body.owner) ? req.body.owner : req.user.id,
+      approved: isAdmin // Auto-approve if created by Admin
     };
 
     const hotel = new Hotel(hotelData);
