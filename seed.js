@@ -27,7 +27,7 @@ const mockHotels = [
     basePricePerNight: 950000,
     checkIn: "14:00 dan",
     checkOut: "12:00 gacha",
-    videoTour: "https://www.youtube.com/watch?v=pAnS_F2j_pY", // Real 360 Hotel Video
+    videoTour: "https://youtu.be/ZZyBG6UsvoQ?si=I_UBX7zl8oGMvXLJ", // Real 360 Hotel Video
     amenities: ["Free WiFi", "Pool", "Spa", "Restaurant", "Gym", "Parking", "Air Conditioning"],
     security: ["24/7 Qo'riqlash", "Video kuzatuv", "Yong'in xavfsizligi"],
     accessibility: {
@@ -90,7 +90,7 @@ const mockHotels = [
     basePricePerNight: 650000,
     checkIn: "14:00",
     checkOut: "12:00",
-    videoTour: "https://www.youtube.com/watch?v=7uV87q_qj_A", // Real 360 Room Video
+    videoTour: "https://www.youtube.com/embed/ZZyBG6UsvoQ?si=CgyfEmVFMkvi6C-b", // Real 360 Room Video
     amenities: ["Free WiFi", "Restaurant", "Gym", "Parking", "Meeting Rooms"],
     rooms: [
       {
@@ -187,7 +187,7 @@ const seedDatabase = async () => {
     await Hotel.deleteMany({});
     const hotelsData = mockHotels.map(h => ({ ...h, owner: owner._id }));
     await Hotel.insertMany(hotelsData);
-    
+
     console.log(`Successfully seeded ${mockHotels.length} properties with 360 Video Tours!`);
     process.exit();
   } catch (error) {
