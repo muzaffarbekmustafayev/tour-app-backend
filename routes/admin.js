@@ -6,8 +6,7 @@ import {
   deleteUser,
   updateUser,
   getStatistics,
-  getAllBookings,
-  getAllHotels
+  getAllHotels,
 } from '../controllers/adminController.js';
 
 const router = express.Router();
@@ -71,18 +70,6 @@ router.delete('/users/:id', authenticate, authorize(['ADMIN']), deleteUser);
  *       200: { description: Success }
  */
 router.get('/statistics', authenticate, authorize(['ADMIN']), getStatistics);
-
-/**
- * @swagger
- * /api/admin/bookings:
- *   get:
- *     summary: Get all system bookings (Admin only)
- *     tags: [Admin]
- *     security: [{ bearerAuth: [] }]
- *     responses:
- *       200: { description: Success }
- */
-router.get('/bookings', authenticate, authorize(['ADMIN']), getAllBookings);
 
 /**
  * @swagger

@@ -2,6 +2,14 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
+// .env dan markaziy JWT sozlamalari
+const JWT_SECRET     = process.env.JWT_SECRET     || 'change_this_secret_in_production';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+
+/** Token yaratish yordamchi funksiyasi */
+const signToken = (payload) =>
+  jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+
 export const addFavorite = async (req, res) => {
   try {
     await User.findByIdAndUpdate(req.user.id, { $addToSet: { favorites: req.params.hotelId } });
@@ -57,39 +65,35 @@ export const updateProfile = async (req, res) => {
 export const register = async (req, res) => {
   try {
     const { name, email, password, role, phone } = req.body;
-    
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ message: 'Bu email allaqachon ro\'yxatdan o\'tgan' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    
+
     const user = new User({
       name,
       email,
       password: hashedPassword,
       role: role || 'CUSTOMER',
-      phone
+      phone,
     });
 
     await user.save();
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET || 'secret',
-      { expiresIn: '7d' }
-    );
+    const token = signToken({ id: user._id, role: user.role });
 
     res.status(201).json({
       token,
       user: {
-        _id: user._id,
-        id: user._id,
-        name: user.name,
+        _id:   user._id,
+        id:    user._id,
+        name:  user.name,
         email: user.email,
-        role: user.role
-      }
+        role:  user.role,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -99,36 +103,32 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Email yoki parol noto\'g\'ri' });
     }
 
     if (user.blocked) {
-      return res.status(403).json({ message: 'Account blocked' });
+      return res.status(403).json({ message: 'Hisobingiz bloklangan. Admin bilan bog\'laning.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Email yoki parol noto\'g\'ri' });
     }
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET || 'secret',
-      { expiresIn: '7d' }
-    );
+    const token = signToken({ id: user._id, role: user.role });
 
     res.json({
       token,
       user: {
-        _id: user._id,
-        id: user._id,
-        name: user.name,
+        _id:   user._id,
+        id:    user._id,
+        name:  user.name,
         email: user.email,
-        role: user.role
-      }
+        role:  user.role,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

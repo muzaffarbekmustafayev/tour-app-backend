@@ -7,7 +7,6 @@ import { mkdirSync } from 'fs';
 
 import authRoutes from './routes/auth.js';
 import hotelRoutes from './routes/hotels.js';
-// import bookingRoutes from './routes/bookings.js';
 import reviewRoutes from './routes/reviews.js';
 import adminRoutes from './routes/admin.js';
 import uploadRoutes from './routes/upload.js';
@@ -35,7 +34,7 @@ const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'NavaiTour Dynamic API Docs',
+      title: `${process.env.APP_NAME || 'NavaiTour'} API Docs`,
       version: '1.0.0',
       description: 'Role-based Dynamic Documentation. \n\n**AUTH QOIDASI:** Avval Login bo\'ling, tokenni oling va "Authorize" tugmasi orqali kiriting. Keyin sahifani (F5) yangilang.',
     },
@@ -76,10 +75,10 @@ app.get('/api/docs/swagger.json', (req, res) => {
       const tags = methods[method].tags || [];
       
       // Filtering logic:
-      // - GUEST: Only 'Auth' and general 'Hotels' (public)
-      // - CUSTOMER: Public + Bookings
-      // - HOTEL_OWNER: Public + Hotels (owner actions) + Bookings
-      // - ADMIN: Everything
+      // - GUEST:       Faqat 'Auth' va umumiy 'Hotels' (public)
+      // - CUSTOMER:    Public endpointlar
+      // - HOTEL_OWNER: Public + Hotels (owner actions)
+      // - ADMIN:       Hammasi
       
       if (role === 'ADMIN') {
         filteredMethods[method] = methods[method];
@@ -126,11 +125,10 @@ app.use('/api/docs', swaggerUi.serve, (req, res) => {
 });
 
 // Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth',   authRoutes);
 app.use('/api/hotels', hotelRoutes);
-// app.use('/api/bookings', bookingRoutes);
 app.use('/api/reviews', reviewRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/admin',  adminRoutes);
 app.use('/api/upload', uploadRoutes);
 
 // Global error handler

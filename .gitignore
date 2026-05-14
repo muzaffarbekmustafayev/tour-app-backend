@@ -1,20 +1,85 @@
-# Dependencies
+# ╔══════════════════════════════════════════════════════════════╗
+# ║            NAVAITOUR BACKEND — .gitignore                   ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+# ── Dependencies ──────────────────────────────────────────────
 node_modules/
+.pnp
+.pnp.js
+.yarn/
+package-lock.json
 
-# Environment variables
+# ── Muhit o'zgaruvchilari (MAXFIY) ───────────────────────────
+# ⚠️  Bu fayllarni HECH QACHON commit qilmang!
 .env
+.env.local
+.env.development
+.env.production
+.env.test
+.env.staging
+.env.*.local
+# ✅ .env.example COMMIT qilinadi — namuna sifatida
 
-# Uploaded files
+# ── Foydalanuvchi yuklagan fayllar ────────────────────────────
 uploads/
+!uploads/.gitkeep
 
-# Logs
+# ── Build chiqish ─────────────────────────────────────────────
+dist/
+build/
+out/
+
+# ── Loglar ────────────────────────────────────────────────────
 logs/
 *.log
 npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# OS
-.DS_Store
-
-# Editor
-.vscode/
+# ── Muharrir / IDE ───────────────────────────────────────────
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
 .idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*~
+
+# ── Operatsion tizim ──────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ── Test va coverage ──────────────────────────────────────────
+coverage/
+.nyc_output/
+*.lcov
+jest.config.js.cache
+
+# ── Vaqtinchalik fayllar ──────────────────────────────────────
+tmp/
+temp/
+*.tmp
+*.bak
+*.orig
+
+# ── Docker ────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ── Debug ─────────────────────────────────────────────────────
+.node_repl_history
+*.pid
+*.seed
+*.pid.lock

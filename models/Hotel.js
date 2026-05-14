@@ -37,9 +37,22 @@ const hotelSchema = new mongoose.Schema({
   description: String,
   descriptionShort: String,
   hotelChain: String,
+  // ── Media ──────────────────────────────────────────────────────────────
   images: [String],
-  videoTour: String,
-  panoramaImages: [String],
+
+  // 360° panorama rasmlari — har biri uchun alt matn va sarlavha
+  panoramas: [{
+    url:     { type: String, required: true },
+    caption: String,                          // "Mehmonxona kirish qismi"
+    room:    String,                          // "Standart xona", "Hovli" …
+  }],
+
+  // Video tur — YouTube yoki to'g'ridan-to'g'ri fayl
+  videoTour: {
+    url:        String,                       // YouTube link yoki mp4
+    captioned:  { type: Boolean, default: false }, // Subtitr mavjudmi?
+    durationSec: Number,                      // Taxminiy uzunlik (soniya)
+  },
   rating: { type: Number, default: 0 },
   reviewsCount: { type: Number, default: 0 },
   ratings: {
@@ -138,12 +151,19 @@ const hotelSchema = new mongoose.Schema({
   },
   digitalInclusion: {
     lowResImagePlaceholder: String,
-    isPwaCompatible: { type: Boolean, default: true },
-    offlineDataSupport: { type: Boolean, default: true },
-    lowDataMode: { type: Boolean, default: false },
-    captionedVideoTour: { type: Boolean, default: false },
-    screenReaderDescription: String
+    isPwaCompatible:        { type: Boolean, default: true },
+    offlineDataSupport:     { type: Boolean, default: true },
+    lowDataMode:            { type: Boolean, default: false },
+    screenReaderDescription: String,  // Ko'rish qiyinligi uchun batafsil tavsif
   },
+  // ── Atmosfera (joy hissini beruvchi qisqa ma'lumotlar) ─────────────────
+  atmosphere: {
+    mood:          String,  // "Tinch va sakin" | "Jonli va gavjum"
+    soundscape:    String,  // "Tong pallasida qushlar sayrashi..."
+    bestTimeOfDay: String,  // "Kechqurun soat 18-20 — oltin soat"
+    localTip:      String,  // "Yaqin atrofda tandir non hidi..."
+  },
+
   nearbyPlaces: [String],
   tags: [String],
   features: [String],

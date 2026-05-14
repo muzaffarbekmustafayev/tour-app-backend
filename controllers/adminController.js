@@ -1,6 +1,5 @@
 import User from '../models/User.js';
 import Hotel from '../models/Hotel.js';
-import Booking from '../models/Booking.js';
 
 export const updateUser = async (req, res) => {
   try {
@@ -42,10 +41,8 @@ export const blockUser = async (req, res) => {
     if (!existingUser) {
       return res.status(404).json({ message: 'User not found' });
     }
-
     existingUser.blocked = !existingUser.blocked;
     await existingUser.save();
-
     const user = await User.findById(req.params.id).select('-password');
     res.json(user);
   } catch (error) {
@@ -55,45 +52,20 @@ export const blockUser = async (req, res) => {
 
 export const getStatistics = async (req, res) => {
   try {
-    const totalUsers = await User.countDocuments();
+    const totalUsers  = await User.countDocuments();
     const totalHotels = await Hotel.countDocuments();
-    const totalBookings = await Booking.countDocuments();
-    
-    // Revenue from all bookings that are not cancelled
-    const bookings = await Booking.find({ status: { $ne: 'cancelled' } });
-    const totalRevenue = bookings.reduce((sum, b) => sum + b.totalPrice, 0);
 
     const topHotels = await Hotel.find()
       .sort('-rating')
       .limit(5)
       .select('name rating reviewsCount');
 
-    const monthlyBookingsRaw = await Booking.aggregate([
-      {
-        $group: {
-          _id: {
-            year: { $year: '$createdAt' },
-            month: { $month: '$createdAt' }
-          },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { '_id.year': 1, '_id.month': 1 } }
-    ]);
-
     res.json({
       totalUsers,
       totalHotels,
-      totalBookings,
-      totalRevenue,
-      totalVisitors: Math.floor(totalUsers * 12.5 + 42), // Mock realistic visitors
+      totalVisitors: Math.floor(totalUsers * 12.5 + 42),
       topHotels,
-      monthlyBookings: monthlyBookingsRaw.map((entry) => ({
-        label: `${entry._id.year}-${String(entry._id.month).padStart(2, '0')}`,
-        count: entry.count
-      }))
     });
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -105,18 +77,6 @@ export const getAllHotels = async (req, res) => {
       .populate('owner', 'name email phone')
       .sort('-createdAt');
     res.json(hotels);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const getAllBookings = async (req, res) => {
-  try {
-    const bookings = await Booking.find()
-      .populate('hotel', 'name city')
-      .populate('user', 'name email')
-      .sort('-createdAt');
-    res.json(bookings);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
