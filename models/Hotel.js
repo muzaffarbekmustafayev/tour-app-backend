@@ -76,21 +76,7 @@ const hotelSchema = new mongoose.Schema({
   },
   category: { type: String, enum: ['hotel', 'resort', 'hostel'] },
   stars: { type: Number, min: 1, max: 5 },
-  basePricePerNight: Number,
-  dynamicPricing: {
-    weekendMarkupPercent: { type: Number, default: 0 },
-    holidayMarkupPercent: { type: Number, default: 0 },
-    lowSeasonDiscountPercent: { type: Number, default: 0 }
-  },
-  discount: {
-    active: Boolean,
-    percent: Number,
-    validUntil: Date
-  },
-  seasonPrices: [{
-    season: String,
-    price: Number
-  }],
+  basePricePerNight: Number,   // Ma'lumotnoma narxi
   rooms: [roomSchema],
   checkIn: String,
   checkOut: String,
@@ -167,13 +153,12 @@ const hotelSchema = new mongoose.Schema({
   nearbyPlaces: [String],
   tags: [String],
   features: [String],
+  // To'lov usullari — muassasa bilan kelishish uchun ma'lumot
   paymentMethods: [{
     type: String,
-    enum: ['Click', 'Payme', 'Uzum Bank', 'Stripe', 'Visa', 'MasterCard', 'Cash', 'Installment']
+    enum: ['Click', 'Payme', 'Uzum Bank', 'Naqd', 'Muddatli to\'lov']
   }],
   statistics: {
-    bookingsThisMonth: { type: Number, default: 0 },
-    occupancyRate: String,
     popularityScore: Number
   },
   owner: {

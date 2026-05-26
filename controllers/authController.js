@@ -3,8 +3,9 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
 // .env dan markaziy JWT sozlamalari
-const JWT_SECRET     = process.env.JWT_SECRET     || 'change_this_secret_in_production';
+const JWT_SECRET     = process.env.JWT_SECRET     || 'navaitour_jwt_secret_2025';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+
 
 /** Token yaratish yordamchi funksiyasi */
 const signToken = (payload) =>
@@ -97,6 +98,76 @@ export const register = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * Google OAuth — access_token yordamida Google userinfo API dan ma'lumot olish.
+ * Frontend: useGoogleLogin (implicit flow) → access_token → POST /api/auth/google
+ */
+export const googleLogin = async (req, res) => {
+  try {
+    const { access_token } = req.body;
+    if (!access_token) {
+      return res.status(400).json({ message: 'Google token topilmadi' });
+    }
+
+    // Google userinfo API dan foydalanuvchi ma'lumotlarini olish
+    const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${access_token}` },
+    });
+
+    if (!googleRes.ok) {
+      return res.status(401).json({ message: 'Google token yaroqsiz yoki muddati o\'tgan' });
+    }
+
+    const { sub: googleId, email, name, picture, email_verified } = await googleRes.json();
+
+    if (!email) {
+      return res.status(400).json({ message: 'Google hisobda email topilmadi' });
+    }
+
+    // Mavjud foydalanuvchini topish (googleId yoki email bo'yicha)
+    let user = await User.findOne({ $or: [{ googleId }, { email }] });
+
+    if (user) {
+      // Mavjud foydalanuvchiga googleId bog'lash (email orqali ro'yxatdan o'tgan bo'lsa)
+      if (!user.googleId) {
+        user.googleId = googleId;
+        if (!user.profileImage && picture) user.profileImage = picture;
+        await user.save();
+      }
+      if (user.blocked) {
+        return res.status(403).json({ message: 'Hisobingiz bloklangan. Admin bilan bog\'laning.' });
+      }
+    } else {
+      // Yangi foydalanuvchi yaratish
+      user = await User.create({
+        name: name || email.split('@')[0],
+        email,
+        googleId,
+        profileImage: picture || '',
+        role: 'CUSTOMER',
+        verification: { emailVerified: !!email_verified },
+      });
+    }
+
+    const token = signToken({ id: user._id, role: user.role });
+
+    res.json({
+      token,
+      user: {
+        _id:          user._id,
+        id:           user._id,
+        name:         user.name,
+        email:        user.email,
+        role:         user.role,
+        profileImage: user.profileImage,
+      },
+    });
+  } catch (error) {
+    console.error('[googleLogin] Xato:', error.message);
+    res.status(500).json({ message: 'Google autentifikatsiya xatosi. Qayta urinib ko\'ring.' });
   }
 };
 

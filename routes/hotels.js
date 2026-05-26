@@ -8,7 +8,6 @@ import {
   deleteHotel,
   approveHotel,
   getOwnerHotels,
-  checkAvailability
 } from '../controllers/hotelController.js';
 
 const router = express.Router();
@@ -56,22 +55,6 @@ router.get('/owner', authenticate, authorize(['HOTEL_OWNER']), getOwnerHotels);
  */
 router.get('/:id', getHotelById);
 
-/**
- * @swagger
- * /api/hotels/{id}/availability:
- *   get:
- *     summary: Check hotel availability (Public)
- *     tags: [Hotels]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: string }
- *     responses:
- *       200:
- *         description: Availability info
- */
-router.get('/:id/availability', checkAvailability);
 
 /**
  * @swagger

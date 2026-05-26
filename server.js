@@ -10,6 +10,7 @@ import hotelRoutes from './routes/hotels.js';
 import reviewRoutes from './routes/reviews.js';
 import adminRoutes from './routes/admin.js';
 import uploadRoutes from './routes/upload.js';
+import chatRoutes from './routes/chat.js';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 dotenv.config();
@@ -130,6 +131,7 @@ app.use('/api/hotels', hotelRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin',  adminRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/chat',   chatRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

@@ -153,47 +153,54 @@ const mockHotels = [
 const seedDatabase = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/navaitour');
-    console.log('MongoDB Connected for seeding');
+    console.log('✅ MongoDB ulandi');
 
-    // Users
+    // ── Foydalanuvchilar ──────────────────────────────────────────
     await User.deleteMany({});
-    const salt = await bcrypt.genSalt(10);
-    const password = await bcrypt.hash('123456', salt);
+    const hashedPassword = await bcrypt.hash('123456', 10);
 
     const admin = await User.create({
-      name: "Admin User",
-      email: "a@gmail.com",
-      password,
-      role: "ADMIN"
+      name: 'Admin',
+      email: 'a@gmail.com',
+      password: hashedPassword,
+      role: 'ADMIN',
+      phone: '+998901234560',
     });
 
     const owner = await User.create({
-      name: "Mehmonxona Egasi",
-      email: "o@gmail.com",
-      password,
-      role: "HOTEL_OWNER"
+      name: 'Hotel Owner',
+      email: 'h@gmail.com',
+      password: hashedPassword,
+      role: 'HOTEL_OWNER',
+      phone: '+998901234561',
     });
 
-    const customer = await User.create({
-      name: "Mijoz",
-      email: "u@gmail.com",
-      password,
-      role: "CUSTOMER"
+    await User.create({
+      name: 'Customer',
+      email: 'c@gmail.com',
+      password: hashedPassword,
+      role: 'CUSTOMER',
+      phone: '+998901234562',
     });
 
-    console.log('Created users: a@gmail.com, o@gmail.com, u@gmail.com (Password: 123456)');
+    console.log('👤 Foydalanuvchilar yaratildi:');
+    console.log('   a@gmail.com  | 123456 | ADMIN');
+    console.log('   h@gmail.com  | 123456 | HOTEL_OWNER');
+    console.log('   c@gmail.com  | 123456 | CUSTOMER');
 
-    // Hotels
+    // ── Mehmonxonalar ─────────────────────────────────────────────
     await Hotel.deleteMany({});
     const hotelsData = mockHotels.map(h => ({ ...h, owner: owner._id }));
     await Hotel.insertMany(hotelsData);
 
-    console.log(`Successfully seeded ${mockHotels.length} properties with 360 Video Tours!`);
-    process.exit();
+    console.log(`🏨 ${mockHotels.length} ta mehmonxona qo'shildi`);
+    console.log('✅ Seed muvaffaqiyatli yakunlandi!');
+    process.exit(0);
   } catch (error) {
-    console.error('Error seeding data:', error);
+    console.error('❌ Seed xatosi:', error.message);
     process.exit(1);
   }
 };
 
 seedDatabase();
+
