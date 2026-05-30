@@ -1,57 +1,47 @@
 import Review from '../models/Review.js';
 import Hotel from '../models/Hotel.js';
+import { asyncHandler } from '../lib/asyncHandler.js';
+import { BadRequestError, NotFoundError } from '../lib/errors.js';
 
-export const createReview = async (req, res) => {
-  try {
-    const { hotelId, hotel, rating, comment } = req.body;
-    const resolvedHotelId = hotelId || hotel;
+export const createReview = asyncHandler(async (req, res) => {
+  const { hotelId, hotel, rating, comment } = req.body;
+  const resolvedHotelId = hotelId || hotel;
+  if (!resolvedHotelId || !rating) {
+    throw new BadRequestError('hotelId va rating majburiy');
+  }
 
-    const review = new Review({
-      hotel: resolvedHotelId,
-      user: req.user.id,
-      rating,
-      comment
-    });
+  const review = new Review({ hotel: resolvedHotelId, user: req.user.id, rating, comment });
+  await review.save();
 
-    await review.save();
-
-    // Mehmonxona reytingini yangilash
-    const reviews = await Review.find({ hotel: resolvedHotelId });
-    const avgRating = reviews.length > 0
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-      : 0;
-
+  const [agg] = await Review.aggregate([
+    { $match: { hotel: review.hotel } },
+    { $group: { _id: '$hotel', avg: { $avg: '$rating' }, count: { $sum: 1 } } },
+  ]);
+  if (agg) {
     await Hotel.findByIdAndUpdate(resolvedHotelId, {
-      rating: avgRating,
-      reviewsCount: reviews.length
+      rating: Math.round(agg.avg * 10) / 10,
+      reviewsCount: agg.count,
     });
-
-    res.status(201).json(review);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
   }
-};
 
-export const getHotelReviews = async (req, res) => {
-  try {
-    const reviews = await Review.find({ hotel: req.params.hotelId })
-      .populate('user', 'name')
-      .sort('-createdAt');
-    res.json(reviews);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+  res.status(201).json(review);
+});
 
-export const replyToReview = async (req, res) => {
-  try {
-    const review = await Review.findByIdAndUpdate(
-      req.params.id,
-      { ownerReply: req.body.reply || req.body.ownerReply },
-      { new: true }
-    );
-    res.json(review);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+export const getHotelReviews = asyncHandler(async (req, res) => {
+  const reviews = await Review.find({ hotel: req.params.hotelId })
+    .populate('user', 'name')
+    .sort('-createdAt');
+  res.json(reviews);
+});
+
+export const replyToReview = asyncHandler(async (req, res) => {
+  const replyText = req.body.reply || req.body.ownerReply;
+  if (!replyText) throw new BadRequestError('reply matni majburiy');
+  const review = await Review.findByIdAndUpdate(
+    req.params.id,
+    { ownerReply: replyText },
+    { new: true }
+  );
+  if (!review) throw new NotFoundError('Review topilmadi');
+  res.json(review);
+});

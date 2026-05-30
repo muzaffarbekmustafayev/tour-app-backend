@@ -1,10 +1,18 @@
+import './config/env.js'; // ← Birinchi import: env tekshiruvi (fail-fast)
+
 import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import cors from 'cors';
-import dotenv from 'dotenv';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { mkdirSync } from 'fs';
 
+import { env } from './config/env.js';
+import { errorHandler } from './middleware/errorHandler.js';
+import { registerChatSocket } from './socket/chatSocket.js';
 import authRoutes from './routes/auth.js';
 import hotelRoutes from './routes/hotels.js';
 import reviewRoutes from './routes/reviews.js';
@@ -13,37 +21,38 @@ import uploadRoutes from './routes/upload.js';
 import chatRoutes from './routes/chat.js';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-dotenv.config();
 
 mkdirSync('uploads', { recursive: true });
 
 const app = express();
+const httpServer = createServer(app);
 
-// CORS
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  credentials: true
-}));
-app.use(express.json());
+// ── Socket.io ─────────────────────────────────────────────────────────────────
+const io = new Server(httpServer, {
+  cors: { origin: env.CLIENT_URL, credentials: true },
+});
+
+// ── Xavfsizlik middleware'lari ────────────────────────────────────────────────
+app.use(helmet());
+app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
+
+// TODO: productiondan oldin rate-limit yoqish
+const authLimiter = (_req, _res, next) => next();
+
+app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', express.static('uploads'));
 
-// Health check
-app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
+// ── Health check ──────────────────────────────────────────────────────────────
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
-// Full Swagger Spec (Internal)
+// ── Swagger ──────────────────────────────────────────────────────────────────
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
-    info: {
-      title: `${process.env.APP_NAME || 'NavaiTour'} API Docs`,
-      version: '1.0.0',
-      description: 'Role-based Dynamic Documentation. \n\n**AUTH QOIDASI:** Avval Login bo\'ling, tokenni oling va "Authorize" tugmasi orqali kiriting. Keyin sahifani (F5) yangilang.',
-    },
-    servers: [{ url: `http://localhost:${process.env.PORT || 5000}` }],
+    info: { title: `${env.APP_NAME} API Docs`, version: '1.0.0' },
+    servers: [{ url: `http://localhost:${env.PORT}` }],
     components: {
-      securitySchemes: {
-        bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-      },
+      securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
     },
   },
   apis: ['./routes/*.js'],
@@ -51,101 +60,106 @@ const swaggerOptions = {
 
 const fullSwaggerSpec = swaggerJsdoc(swaggerOptions);
 
-// Dynamic Swagger JSON endpoint
 app.get('/api/docs/swagger.json', (req, res) => {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.replace('Bearer ', '');
-  
+  const token = (req.headers.authorization || '').replace('Bearer ', '');
   let role = 'GUEST';
   try {
     if (token) {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_secret_key_here');
+      const decoded = jwt.verify(token, env.JWT_SECRET);
       role = decoded.role;
     }
-  } catch (err) {
-    role = 'GUEST';
+  } catch { /* token yo'q yoki yaroqsiz — GUEST */ }
+
+  const filteredPaths = {};
+  for (const [path, methods] of Object.entries(fullSwaggerSpec.paths)) {
+    const filteredMethods = {};
+    for (const [method, op] of Object.entries(methods)) {
+      const tags = op.tags || [];
+      const isAdmin    = role === 'ADMIN';
+      const isOwner    = role === 'HOTEL_OWNER';
+      const isCustomer = role === 'CUSTOMER' || role === 'USER';
+
+      if (isAdmin) {
+        filteredMethods[method] = op;
+      } else if (isOwner && !tags.includes('Admin')) {
+        filteredMethods[method] = op;
+      } else if (isCustomer && !tags.includes('Admin') && !op.summary?.includes('HotelOwner only')) {
+        filteredMethods[method] = op;
+      } else if (!isAdmin && !isOwner && !isCustomer) {
+        if (tags.includes('Auth') || op.summary?.includes('Public')) {
+          filteredMethods[method] = op;
+        }
+      }
+    }
+    if (Object.keys(filteredMethods).length) filteredPaths[path] = filteredMethods;
   }
 
-  // Filter paths based on tags and role
-  const filteredPaths = {};
-  Object.keys(fullSwaggerSpec.paths).forEach(path => {
-    const methods = fullSwaggerSpec.paths[path];
-    const filteredMethods = {};
-    
-    Object.keys(methods).forEach(method => {
-      const tags = methods[method].tags || [];
-      
-      // Filtering logic:
-      // - GUEST:       Faqat 'Auth' va umumiy 'Hotels' (public)
-      // - CUSTOMER:    Public endpointlar
-      // - HOTEL_OWNER: Public + Hotels (owner actions)
-      // - ADMIN:       Hammasi
-      
-      if (role === 'ADMIN') {
-        filteredMethods[method] = methods[method];
-      } else if (role === 'HOTEL_OWNER') {
-        if (!tags.includes('Admin')) filteredMethods[method] = methods[method];
-      } else if (role === 'CUSTOMER' || role === 'USER') {
-        if (!tags.includes('Admin') && !methods[method].summary.includes('HotelOwner only')) {
-          filteredMethods[method] = methods[method];
-        }
-      } else {
-        // GUEST
-        if (tags.includes('Auth') || methods[method].summary.includes('Public')) {
-          filteredMethods[method] = methods[method];
-        }
-      }
-    });
-
-    if (Object.keys(filteredMethods).length > 0) {
-      filteredPaths[path] = filteredMethods;
-    }
-  });
-
-  const filteredSpec = { ...fullSwaggerSpec, paths: filteredPaths };
-  res.json(filteredSpec);
+  res.json({ ...fullSwaggerSpec, paths: filteredPaths });
 });
 
-// Configure Swagger UI to fetch from the dynamic JSON and pass headers
 app.use('/api/docs', swaggerUi.serve, (req, res) => {
   swaggerUi.setup(null, {
-    swaggerOptions: {
-      url: '/api/docs/swagger.json', // Dynamic source
-      persistAuthorization: true,
-      requestInterceptor: (request) => {
-        // Persist token in spec request if available in local storage
-        const authData = JSON.parse(localStorage.getItem('authorized') || '{}');
-        const token = authData.bearerAuth?.value;
-        if (token) {
-          request.headers.Authorization = `Bearer ${token}`;
-        }
-        return request;
-      }
-    }
+    swaggerOptions: { url: '/api/docs/swagger.json', persistAuthorization: true },
   })(req, res);
 });
 
-// Routes
-app.use('/api/auth',   authRoutes);
-app.use('/api/hotels', hotelRoutes);
+// ── Routes ───────────────────────────────────────────────────────────────────
+app.use('/api/auth',    authLimiter, authRoutes);
+app.use('/api/hotels',  hotelRoutes);
 app.use('/api/reviews', reviewRoutes);
-app.use('/api/admin',  adminRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/chat',   chatRoutes);
+app.use('/api/admin',   adminRoutes);
+app.use('/api/upload',  uploadRoutes);
+app.use('/api/chat',    chatRoutes);
 
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: err.message || 'Internal server error' });
+// ── Markaziy error handler ────────────────────────────────────────────────────
+app.use(errorHandler);
+
+// ── Socket.io auth middleware ─────────────────────────────────────────────────
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+  if (!token) return next(new Error('Auth token missing'));
+  try {
+    const decoded = jwt.verify(token, env.JWT_SECRET);
+    socket.userId = decoded.id || decoded._id;
+    next();
+  } catch {
+    next(new Error('Invalid token'));
+  }
 });
 
-// MongoDB connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/navaitour')
-  .then(() => console.log('✅ MongoDB connected'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+// Chat socket handlerlarini ro'yxatdan o'tkazish (socket/chatSocket.js)
+registerChatSocket(io);
 
-const PORT = process.env.PORT || 5000;
+// ── MongoDB + Start ───────────────────────────────────────────────────────────
+mongoose.connect(env.MONGODB_URI)
+  .then(() => console.log('✅ MongoDB ulandi'))
+  .catch(err => {
+    console.error('❌ MongoDB ulanish xatosi:', err.message);
+    process.exit(1);
+  });
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+httpServer.listen(env.PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server ${env.PORT}-portda ishga tushdi [${env.NODE_ENV}]`);
+});
+
+// ── Graceful Shutdown ─────────────────────────────────────────────────────────
+const shutdown = async (signal) => {
+  console.log(`\n[${signal}] Server yopilmoqda...`);
+  httpServer.close(async () => {
+    await mongoose.connection.close();
+    console.log('✅ Barcha ulanishlar yopildi.');
+    process.exit(0);
+  });
+  setTimeout(() => {
+    console.error('⚠️ Graceful shutdown vaqti o\'tdi. Majburiy chiqish.');
+    process.exit(1);
+  }, 10_000).unref();
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT',  () => shutdown('SIGINT'));
+process.on('unhandledRejection', (reason) => { console.error('[unhandledRejection]', reason); });
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err.message, err.stack);
+  process.exit(1);
 });

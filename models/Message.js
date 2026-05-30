@@ -1,36 +1,47 @@
 import mongoose from 'mongoose';
 
 const messageSchema = new mongoose.Schema({
+  conversation: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Conversation',
+    required: true,
+  },
   sender: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
   },
   receiver: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
   },
   hotel: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Hotel',
-    required: true
   },
   content: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
+    maxlength: [2000, "Xabar 2000 belgidan uzun bo'lishi mumkin emas"],
+    validate: {
+      validator: (v) => v.trim().length > 0,
+      message: "Xabar bo'sh bo'lishi mumkin emas",
+    },
   },
-  isRead: {
+  type: {
+    type: String,
+    enum: ['text', 'image', 'file'],
+    default: 'text',
+  },
+  read: {
     type: Boolean,
-    default: false
-  }
-}, {
-  timestamps: true
-});
+    default: false,
+  },
+}, { timestamps: true });
 
-// Indexes for faster querying of chat history and unread status
-messageSchema.index({ sender: 1, receiver: 1, hotel: 1 });
-messageSchema.index({ receiver: 1, isRead: 1 });
+messageSchema.index({ conversation: 1, createdAt: 1 });
+messageSchema.index({ receiver: 1, read: 1 });
 
 export default mongoose.model('Message', messageSchema);

@@ -1,177 +1,125 @@
 import Hotel from '../models/Hotel.js';
+import { asyncHandler } from '../lib/asyncHandler.js';
+import { NotFoundError, ForbiddenError } from '../lib/errors.js';
 
-// Reja 1: Accessibility filtrlari xaritasi
+// Accessibility filtrlari xaritasi
 const ACC_MAP = {
-  wheelchair:          'accessibility.mobility.wheelchairAccessible',
-  stepFreeRoute:       'accessibility.mobility.stepFreeRoute',
-  accessibleRooms:     'accessibility.mobility.accessibleRooms',
-  accessibleParking:   'accessibility.mobility.accessibleParking',
-  accessibleToilet:    'accessibility.mobility.accessibleToilet',
-  brailleSigns:        'accessibility.visual.brailleSigns',
-  tactilePaving:       'accessibility.visual.tactilePaving',
-  highContrastSignage: 'accessibility.visual.highContrastSignage',
-  audioGuides:         'accessibility.auditory.audioGuides',
-  hearingLoop:         'accessibility.auditory.hearingLoop',
-  vibrationAlerts:     'accessibility.auditory.vibrationAlerts',
-  signLanguageStaff:   'accessibility.auditory.signLanguageStaff',
-  quietZones:          'accessibility.cognitive.quietZones',
-  easyToReadSignage:   'accessibility.cognitive.easyToReadSignage',
+  wheelchair:            'accessibility.mobility.wheelchairAccessible',
+  stepFreeRoute:         'accessibility.mobility.stepFreeRoute',
+  accessibleRooms:       'accessibility.mobility.accessibleRooms',
+  accessibleParking:     'accessibility.mobility.accessibleParking',
+  accessibleToilet:      'accessibility.mobility.accessibleToilet',
+  brailleSigns:          'accessibility.visual.brailleSigns',
+  tactilePaving:         'accessibility.visual.tactilePaving',
+  highContrastSignage:   'accessibility.visual.highContrastSignage',
+  audioGuides:           'accessibility.auditory.audioGuides',
+  hearingLoop:           'accessibility.auditory.hearingLoop',
+  vibrationAlerts:       'accessibility.auditory.vibrationAlerts',
+  signLanguageStaff:     'accessibility.auditory.signLanguageStaff',
+  quietZones:            'accessibility.cognitive.quietZones',
+  easyToReadSignage:     'accessibility.cognitive.easyToReadSignage',
   serviceAnimalFriendly: 'accessibility.support.serviceAnimalFriendly',
-  strollerAccessible:  'familyAndElderly.strollerAccessible',
-  medicalOnSite:       'familyAndElderly.medicalServiceOnSite',
-  nursingRoom:         'familyAndElderly.nursingRoom',
-  offlineDataSupport:  'digitalInclusion.offlineDataSupport',
-  lowDataMode:         'digitalInclusion.lowDataMode',
+  strollerAccessible:    'familyAndElderly.strollerAccessible',
+  medicalOnSite:         'familyAndElderly.medicalServiceOnSite',
+  nursingRoom:           'familyAndElderly.nursingRoom',
+  offlineDataSupport:    'digitalInclusion.offlineDataSupport',
+  lowDataMode:           'digitalInclusion.lowDataMode',
 };
 
-export const getAllHotels = async (req, res) => {
-  try {
-    const { city, stars, minPrice, maxPrice, category, search } = req.query;
+export const getAllHotels = asyncHandler(async (req, res) => {
+  const { city, stars, minPrice, maxPrice, category, search } = req.query;
 
-    let query = { approved: true };
+  const query = { approved: true };
 
-    if (city)     query.city     = new RegExp(city, 'i');
-    if (stars)    query.stars    = Number(stars);
-    if (category) query.category = category;
+  if (city)     query.city     = new RegExp(city, 'i');
+  if (stars)    query.stars    = Number(stars);
+  if (category) query.category = category;
 
-    if (minPrice || maxPrice) {
-      query.basePricePerNight = {};
-      if (minPrice) query.basePricePerNight.$gte = Number(minPrice);
-      if (maxPrice) query.basePricePerNight.$lte = Number(maxPrice);
-    }
-
-    if (search) query.$text = { $search: search };
-
-    // Reja 1: Accessibility filtrlari
-    Object.entries(ACC_MAP).forEach(([key, path]) => {
-      if (req.query[key] === 'true') query[path] = true;
-    });
-
-    // Reja 2: Pagination
-    const page  = Math.max(1, parseInt(req.query.page)  || 1);
-    const limit = Math.min(50, parseInt(req.query.limit) || 12);
-    const skip  = (page - 1) * limit;
-
-    const [hotels, total] = await Promise.all([
-      Hotel.find(query).sort('-createdAt').skip(skip).limit(limit).select('-owner'),
-      Hotel.countDocuments(query),
-    ]);
-
-    res.json({
-      data:  hotels,
-      total,
-      page,
-      pages: Math.ceil(total / limit),
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  if (minPrice || maxPrice) {
+    query.basePricePerNight = {};
+    if (minPrice) query.basePricePerNight.$gte = Number(minPrice);
+    if (maxPrice) query.basePricePerNight.$lte = Number(maxPrice);
   }
-};
 
-export const getHotelById = async (req, res) => {
-  try {
-    const hotel = await Hotel.findById(req.params.id)
-      .populate('owner', 'name email phone');
-    
-    if (!hotel) {
-      return res.status(404).json({ message: 'Hotel not found' });
-    }
-    
-    res.json(hotel);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  if (search) query.$text = { $search: search };
+
+  // Accessibility filtrlari
+  for (const [key, path] of Object.entries(ACC_MAP)) {
+    if (req.query[key] === 'true') query[path] = true;
   }
-};
 
-export const createHotel = async (req, res) => {
-  try {
-    const isAdmin = req.user.role === 'ADMIN';
-    const hotelData = {
-      ...req.body,
-      owner: (isAdmin && req.body.owner) ? req.body.owner : req.user.id,
-      approved: isAdmin // Auto-approve if created by Admin
-    };
+  const page  = Math.max(1, parseInt(req.query.page)  || 1);
+  const limit = Math.min(50, parseInt(req.query.limit) || 12);
+  const skip  = (page - 1) * limit;
 
-    const hotel = new Hotel(hotelData);
-    await hotel.save();
-    
-    res.status(201).json(hotel);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+  const [hotels, total] = await Promise.all([
+    Hotel.find(query).sort('-createdAt').skip(skip).limit(limit).select('-owner'),
+    Hotel.countDocuments(query),
+  ]);
+
+  res.json({ data: hotels, total, page, pages: Math.ceil(total / limit) });
+});
+
+export const getHotelById = asyncHandler(async (req, res) => {
+  const hotel = await Hotel.findById(req.params.id).populate('owner', 'name email phone');
+  if (!hotel) throw new NotFoundError('Hotel topilmadi');
+  res.json(hotel);
+});
+
+export const createHotel = asyncHandler(async (req, res) => {
+  const isAdmin = req.user.role === 'ADMIN';
+  const hotelData = {
+    ...req.body,
+    owner: (isAdmin && req.body.owner) ? req.body.owner : req.user.id,
+    approved: isAdmin, // Admin yaratsa — avtomatik tasdiqlash
+  };
+
+  const hotel = new Hotel(hotelData);
+  await hotel.save();
+  res.status(201).json(hotel);
+});
+
+export const updateHotel = asyncHandler(async (req, res) => {
+  const hotel = await Hotel.findById(req.params.id);
+  if (!hotel) throw new NotFoundError('Hotel topilmadi');
+
+  if (hotel.owner.toString() !== req.user.id && req.user.role !== 'ADMIN') {
+    throw new ForbiddenError('Bu hotelni tahrirlash uchun ruxsatingiz yo\'q');
   }
-};
 
-export const updateHotel = async (req, res) => {
-  try {
-    const hotel = await Hotel.findById(req.params.id);
-    
-    if (!hotel) {
-      return res.status(404).json({ message: 'Hotel not found' });
-    }
+  // approved maydonini update orqali bypass qilishni oldini olish
+  const updatedHotel = await Hotel.findByIdAndUpdate(
+    req.params.id,
+    { ...req.body, approved: hotel.approved },
+    { new: true, runValidators: true }
+  );
 
-    // Check ownership or admin role
-    if (hotel.owner.toString() !== req.user.id && req.user.role !== 'ADMIN') {
-      return res.status(403).json({ message: 'Not authorized' });
-    }
+  res.json(updatedHotel);
+});
 
-    const updatedHotel = await Hotel.findByIdAndUpdate(
-      req.params.id,
-      { ...req.body, approved: hotel.approved }, // Prevent bypassing approval via update
-      { new: true, runValidators: true }
-    );
+export const deleteHotel = asyncHandler(async (req, res) => {
+  const hotel = await Hotel.findById(req.params.id);
+  if (!hotel) throw new NotFoundError('Hotel topilmadi');
 
-    res.json(updatedHotel);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+  if (hotel.owner.toString() !== req.user.id && req.user.role !== 'ADMIN') {
+    throw new ForbiddenError('Bu hotelni o\'chirish uchun ruxsatingiz yo\'q');
   }
-};
 
-export const deleteHotel = async (req, res) => {
-  try {
-    const hotel = await Hotel.findById(req.params.id);
+  await Hotel.findByIdAndDelete(req.params.id);
+  res.json({ message: 'Hotel muvaffaqiyatli o\'chirildi' });
+});
 
-    if (!hotel) {
-      return res.status(404).json({ message: 'Hotel not found' });
-    }
+export const approveHotel = asyncHandler(async (req, res) => {
+  const hotel = await Hotel.findByIdAndUpdate(
+    req.params.id,
+    { approved: true, moderationStatus: 'approved' },
+    { new: true }
+  );
+  if (!hotel) throw new NotFoundError('Hotel topilmadi');
+  res.json(hotel);
+});
 
-    // Check ownership or admin role
-    if (hotel.owner.toString() !== req.user.id && req.user.role !== 'ADMIN') {
-      return res.status(403).json({ message: 'Not authorized' });
-    }
-
-    await Hotel.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Hotel deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const approveHotel = async (req, res) => {
-  try {
-    const hotel = await Hotel.findByIdAndUpdate(
-      req.params.id,
-      { approved: true, moderationStatus: 'approved' },
-      { new: true }
-    );
-
-    if (!hotel) {
-      return res.status(404).json({ message: 'Hotel not found' });
-    }
-
-    res.json(hotel);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const getOwnerHotels = async (req, res) => {
-  try {
-    const hotels = await Hotel.find({ owner: req.user.id })
-      .sort('-createdAt');
-    res.json(hotels);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-
+export const getOwnerHotels = asyncHandler(async (req, res) => {
+  const hotels = await Hotel.find({ owner: req.user.id }).sort('-createdAt');
+  res.json(hotels);
+});

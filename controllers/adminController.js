@@ -1,83 +1,61 @@
 import User from '../models/User.js';
 import Hotel from '../models/Hotel.js';
+import { asyncHandler } from '../lib/asyncHandler.js';
+import { NotFoundError } from '../lib/errors.js';
 
-export const updateUser = async (req, res) => {
-  try {
-    const { name, email, role, blocked, phone } = req.body;
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { name, email, role, blocked, phone },
-      { new: true, runValidators: true }
-    ).select('-password');
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(user);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-};
+export const updateUser = asyncHandler(async (req, res) => {
+  const { name, email, role, blocked, phone } = req.body;
+  const user = await User.findByIdAndUpdate(
+    req.params.id,
+    { name, email, role, blocked, phone },
+    { new: true, runValidators: true }
+  ).select('-password');
+  if (!user) throw new NotFoundError('Foydalanuvchi topilmadi');
+  res.json(user);
+});
 
-export const deleteUser = async (req, res) => {
-  try {
-    const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json({ message: 'User deleted' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+export const deleteUser = asyncHandler(async (req, res) => {
+  const user = await User.findByIdAndDelete(req.params.id);
+  if (!user) throw new NotFoundError('Foydalanuvchi topilmadi');
+  res.json({ message: 'Foydalanuvchi o\'chirildi' });
+});
 
-export const getUsers = async (req, res) => {
-  try {
-    const users = await User.find().select('-password');
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+export const getUsers = asyncHandler(async (_req, res) => {
+  const users = await User.find().select('-password');
+  res.json(users);
+});
 
-export const blockUser = async (req, res) => {
-  try {
-    const existingUser = await User.findById(req.params.id);
-    if (!existingUser) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    existingUser.blocked = !existingUser.blocked;
-    await existingUser.save();
-    const user = await User.findById(req.params.id).select('-password');
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+export const blockUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user) throw new NotFoundError('Foydalanuvchi topilmadi');
 
-export const getStatistics = async (req, res) => {
-  try {
-    const totalUsers  = await User.countDocuments();
-    const totalHotels = await Hotel.countDocuments();
+  user.blocked = !user.blocked;
+  await user.save();
 
-    const topHotels = await Hotel.find()
-      .sort('-rating')
-      .limit(5)
-      .select('name rating reviewsCount');
+  // save() dan keyin password-siz javob qaytarish
+  const result = await User.findById(req.params.id).select('-password');
+  res.json(result);
+});
 
-    res.json({
-      totalUsers,
-      totalHotels,
-      totalVisitors: Math.floor(totalUsers * 12.5 + 42),
-      topHotels,
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+export const getStatistics = asyncHandler(async (_req, res) => {
+  // Parallel so'rovlar — N+1 emas
+  const [totalUsers, totalHotels, topHotels] = await Promise.all([
+    User.countDocuments(),
+    Hotel.countDocuments(),
+    Hotel.find().sort('-rating').limit(5).select('name rating reviewsCount'),
+  ]);
 
-export const getAllHotels = async (req, res) => {
-  try {
-    const hotels = await Hotel.find()
-      .populate('owner', 'name email phone')
-      .sort('-createdAt');
-    res.json(hotels);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+  res.json({
+    totalUsers,
+    totalHotels,
+    totalVisitors: Math.floor(totalUsers * 12.5 + 42),
+    topHotels,
+  });
+});
+
+export const getAllHotels = asyncHandler(async (_req, res) => {
+  const hotels = await Hotel.find()
+    .populate('owner', 'name email phone')
+    .sort('-createdAt');
+  res.json(hotels);
+});

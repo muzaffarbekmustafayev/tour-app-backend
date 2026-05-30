@@ -1,30 +1,29 @@
 import jwt from 'jsonwebtoken';
+import { env } from '../config/env.js';
+import { UnauthorizedError, ForbiddenError } from '../lib/errors.js';
+import { asyncHandler } from '../lib/asyncHandler.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'navaitour_jwt_secret_2025';
-
-export const authenticate = (req, res, next) => {
+export const authenticate = asyncHandler(async (req, _res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    throw new UnauthorizedError('Token topilmadi. Iltimos, tizimga kiring.');
+  }
+  const token = authHeader.split(' ')[1];
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'Token topilmadi. Iltimos, tizimga kiring.' });
-    }
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, env.JWT_SECRET);
     req.user = decoded;
     next();
-  } catch (error) {
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ message: 'Token muddati tugagan. Qayta kiring.' });
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      throw new UnauthorizedError('Token muddati tugagan. Qayta kiring.');
     }
-    return res.status(401).json({ message: 'Yaroqsiz token.' });
+    throw new UnauthorizedError('Yaroqsiz token.');
   }
-};
+});
 
-export const authorize = (roles) => {
-  return (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      return res.status(403).json({ message: "Bu amalni bajarishga ruxsatingiz yo'q." });
-    }
-    next();
-  };
+export const authorize = (roles) => (req, _res, next) => {
+  if (!req.user || !roles.includes(req.user.role)) {
+    return next(new ForbiddenError("Bu amalni bajarishga ruxsatingiz yo'q."));
+  }
+  next();
 };
