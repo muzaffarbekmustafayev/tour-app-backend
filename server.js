@@ -19,6 +19,7 @@ import reviewRoutes from './routes/reviews.js';
 import adminRoutes from './routes/admin.js';
 import uploadRoutes from './routes/upload.js';
 import chatRoutes from './routes/chat.js';
+import assistantRoutes from './routes/assistant.js';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 
@@ -110,6 +111,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin',   adminRoutes);
 app.use('/api/upload',  uploadRoutes);
 app.use('/api/chat',    chatRoutes);
+app.use('/api/assistant', assistantRoutes);
 
 // ── Markaziy error handler ────────────────────────────────────────────────────
 app.use(errorHandler);
