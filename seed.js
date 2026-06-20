@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
 import Hotel from './models/Hotel.js';
 import User from './models/User.js';
+import Attraction from './models/Attraction.js';
 
 dotenv.config();
 
@@ -243,6 +244,150 @@ const mockHotels = [
   }
 ];
 
+/**
+ * Tarixiy / diqqatga sazovor joylar (Attraction) — egasiz, admin qo'shadi.
+ * Har biri 360° video, "atrofda nima bor" va koordinatalar bilan.
+ * Koordinatalar yuqoridagi mehmonxonalarga yaqin tanlangan (10 km ichida).
+ */
+const mockAttractions = [
+  // ── NUROTA ──
+  {
+    name: "Nurota Chashma majmuasi",
+    district: "Nurota",
+    description: "Nurota shahridagi muqaddas buloq va ziyoratgoh majmuasi. Afsonaga ko'ra buloq Hazrati Ali tomonidan paydo bo'lgan deyiladi. Majmuada qadimiy masjid, hammom va muqaddas baliqlar yashaydigan tiniq suvli hovuz mavjud. Yil davomida minglab ziyoratchi va sayyoh tashrif buyuradi.",
+    descriptionShort: "Muqaddas buloq, qadimiy masjid va muqaddas baliqlar.",
+    images: [
+      "https://images.unsplash.com/photo-1590060766050-3ef0d4a8f7a6?auto=format&fit=crop&q=80&w=1000",
+      "https://images.unsplash.com/photo-1564507592333-c60657eea523?auto=format&fit=crop&q=80&w=1000"
+    ],
+    video360: { url: "https://www.youtube.com/watch?v=ZZyBG6UsvoQ", type: "youtube", captioned: true },
+    thingsToSeeAround: [
+      { title: "Muqaddas baliqlar hovuzi", description: "Asrlar davomida muhofaza qilinadigan marinka baliqlari.", type: "diniy", walkingMinutes: 2 },
+      { title: "Nur qal'asi xarobalari", description: "Aleksandr Makedonskiy davriga oid qadimiy qal'a qoldiqlari.", type: "tarix", walkingMinutes: 15 },
+      { title: "Hunarmandlar bozorchasi", description: "Mahalliy sovg'a va milliy taomlar.", type: "bozor", walkingMinutes: 5 }
+    ],
+    location: { lat: 40.5640, lng: 65.6895 },
+    address: "Chashma ko'chasi, Nurota",
+    accessibility: { wheelchairAccessible: true, accessibleParking: true, accessibleToilet: true, audioGuides: true, quietZones: true, serviceAnimalFriendly: true },
+    atmosphere: {
+      mood: "Tinch va ziyoratbop",
+      soundscape: "Buloq suvining shildirashi va ziyoratchilar duosi",
+      bestTimeOfDay: "Erta tong — eng salqin va sokin payt",
+      localTip: "Buloqdagi muqaddas baliqlarni ovqatlantirish taqiqlanadi — faqat kuzating."
+    },
+    bestSeason: "Bahor va kuz",
+    entryFee: "Bepul",
+    rating: 4.9, reviewsCount: 0
+  },
+  {
+    name: "Sarmishsoy qoyatosh suratlari",
+    district: "Nurota",
+    description: "Nurota tog'laridagi Sarmish darasida joylashgan ochiq osmon ostidagi muzey. Bu yerda 4 mingdan ortiq, ayrimlari 7 ming yillik tarixga ega petrogliflar — qoyatosh suratlari saqlangan. Suratlarda ov sahnalari, hayvonlar va qadimgi marosimlar tasvirlangan.",
+    descriptionShort: "7 ming yillik petrogliflar ochiq osmon ostidagi muzey.",
+    images: [
+      "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&q=80&w=1000"
+    ],
+    video360: { url: "https://www.youtube.com/watch?v=F0m9n8-VvQc", type: "youtube", captioned: false },
+    thingsToSeeAround: [
+      { title: "Ov sahnasi petrogliflari", description: "Qadimgi ovchilar va yovvoyi hayvonlar tasviri.", type: "tarix", walkingMinutes: 10 },
+      { title: "Dara bo'ylab piyoda yo'l", description: "Tabiat qo'ynida sokin sayr.", type: "tabiat", walkingMinutes: 20 }
+    ],
+    location: { lat: 40.4555, lng: 65.4525 },
+    address: "Sarmish darasi, Nurota tumani",
+    accessibility: { accessibleParking: true, audioGuides: true, quietZones: true, serviceAnimalFriendly: true },
+    atmosphere: {
+      mood: "Tabiat bilan uyg'un, sirli",
+      soundscape: "Daraning sukunati va shamol ovozi",
+      bestTimeOfDay: "Quyosh botishidan oldin — suratlar yaqqol ko'rinadi",
+      localTip: "Yoningizga suv va quyoshdan himoya oling — soyabon kam."
+    },
+    bestSeason: "Aprel–Iyun, Sentabr–Oktabr",
+    entryFee: "20 000 so'm",
+    rating: 4.7, reviewsCount: 0
+  },
+  // ── XATIRCHI ──
+  {
+    name: "Polkan baxshi xotira majmuasi",
+    district: "Xatirchi",
+    description: "Mashhur o'zbek xalq baxshisi Polkan (Qurbonnazar) va shoir Amirqul Polkan xotirasiga bag'ishlangan majmua. Bu yerda baxshichilik san'ati, dostonchilik an'analari va milliy musiqa merosi bilan tanishish mumkin. Majmua Xatirchi tumanining madaniy markazi hisoblanadi.",
+    descriptionShort: "Baxshichilik va dostonchilik san'atiga bag'ishlangan majmua.",
+    images: [
+      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&q=80&w=1000"
+    ],
+    video360: { url: "https://www.youtube.com/watch?v=ZZyBG6UsvoQ", type: "youtube", captioned: true },
+    thingsToSeeAround: [
+      { title: "Baxshichilik dasturlari", description: "Kechki paytlarda dutor jo'rligida dostonlar.", type: "tarix", walkingMinutes: 1 },
+      { title: "Zarafshon daryosi sohili", description: "Daryo bo'yida sayr va dam olish.", type: "tabiat", walkingMinutes: 12 },
+      { title: "Milliy taomlar oshxonasi", description: "Tandir non va mahalliy palov.", type: "ovqat", walkingMinutes: 3 }
+    ],
+    location: { lat: 40.2515, lng: 65.9565 },
+    address: "Yangirabot shaharchasi, Xatirchi tumani",
+    accessibility: { wheelchairAccessible: true, accessibleParking: true, accessibleToilet: true, brailleSigns: true, signLanguageStaff: true, audioGuides: true },
+    atmosphere: {
+      mood: "Milliy va mehmondo'st",
+      soundscape: "Dutor sadosi va baxshi qo'shig'i",
+      bestTimeOfDay: "Kechki payt — baxshichilik dasturlari vaqti",
+      localTip: "Dasturlar odatda hafta oxiri kechqurun bo'ladi — oldindan so'rang."
+    },
+    bestSeason: "Bahor va kuz",
+    entryFee: "Bepul",
+    rating: 4.6, reviewsCount: 0
+  },
+  // ── QIZILTEPA ──
+  {
+    name: "Toshmasjid majmuasi (Vangozi)",
+    district: "Qiziltepa",
+    description: "Qiziltepa tumanidagi Vangozi qishlog'ida joylashgan XVI–XIX asrlarga oid tarixiy masjid majmuasi. Toshdan qurilgani uchun \"Toshmasjid\" deb ataladi. Buyuk Ipak yo'li merosi va o'sha davr me'morchiligining noyob namunasi.",
+    descriptionShort: "XVI–XIX asrlarga oid noyob toshdan qurilgan masjid.",
+    images: [
+      "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80&w=1000"
+    ],
+    video360: { url: "https://www.youtube.com/watch?v=vV_X1xR-oO8", type: "youtube", captioned: false },
+    thingsToSeeAround: [
+      { title: "Qadimiy minora", description: "Masjid yonidagi tosh minora.", type: "tarix", walkingMinutes: 2 },
+      { title: "So'g'd manzilgohi xarobalari", description: "Qadimiy So'g'd davriga oid arxeologik yodgorlik.", type: "tarix", walkingMinutes: 25 }
+    ],
+    location: { lat: 40.0072, lng: 64.8472 },
+    address: "Vangozi qishlog'i, Qiziltepa tumani",
+    accessibility: { wheelchairAccessible: true, accessibleParking: true, accessibleToilet: true, brailleSigns: true, audioGuides: true, quietZones: true, serviceAnimalFriendly: true },
+    atmosphere: {
+      mood: "Tarixiy va sokin",
+      soundscape: "Eski hovlidagi sukunat va shamol",
+      bestTimeOfDay: "Tushdan keyin — tosh devorlar yorug'likda go'zal ko'rinadi",
+      localTip: "Me'moriy naqshlarga diqqat bering — har bir tosh qo'lda ishlangan."
+    },
+    bestSeason: "Mart–May, Sentabr–Noyabr",
+    entryFee: "Bepul",
+    rating: 4.5, reviewsCount: 0
+  },
+  {
+    name: "Xoja Boyazid Bistomiy maqbarasi",
+    district: "Qiziltepa",
+    description: "Mashhur so'fiy avliyo Boyazid Bistomiy nomi bilan bog'liq ziyoratgoh. Mintaqadagi muhim ziyorat turizmi nuqtalaridan biri. Sokin muhiti va ma'naviy ahamiyati bilan ziyoratchilarni o'ziga jalb etadi.",
+    descriptionShort: "So'fiylik bilan bog'liq muhim ziyoratgoh.",
+    images: [
+      "https://images.unsplash.com/photo-1545048702-79362596cdc9?auto=format&fit=crop&q=80&w=1000"
+    ],
+    video360: { url: "https://www.youtube.com/watch?v=vV_X1xR-oO8", type: "youtube", captioned: false },
+    thingsToSeeAround: [
+      { title: "Ziyoratgoh hovlisi", description: "Sokin bog' va dam olish maydoni.", type: "diniy", walkingMinutes: 2 },
+      { title: "Qiziltepa markaziy bozori", description: "Mahalliy mevalar va hunarmandchilik.", type: "bozor", walkingMinutes: 15 }
+    ],
+    location: { lat: 40.0185, lng: 64.8555 },
+    address: "Qiziltepa shahri",
+    accessibility: { wheelchairAccessible: true, accessibleParking: true, accessibleToilet: true, quietZones: true, serviceAnimalFriendly: true },
+    atmosphere: {
+      mood: "Sokin va ma'naviy",
+      soundscape: "Bog'dagi qush sayrashi va shamol",
+      bestTimeOfDay: "Erta tong yoki kechqurun",
+      localTip: "Ziyoratdan so'ng mahalliy choyxonada choy marosimini sinab ko'ring."
+    },
+    bestSeason: "Yil bo'yi",
+    entryFee: "Bepul",
+    rating: 4.4, reviewsCount: 0
+  }
+];
+
 const seedDatabase = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/navaitour');
@@ -283,11 +428,37 @@ const seedDatabase = async () => {
 
     // ── Mehmonxonalar (3 tuman: Nurota, Xatirchi, Qiziltepa) ──────
     await Hotel.deleteMany({});
-    const hotelsData = mockHotels.map(h => ({ ...h, owner: owner._id }));
+    const hotelsData = mockHotels.map(h => ({
+      ...h,
+      owner: owner._id,
+      // city allaqachon tuman nomi — uni rasmiy district maydoniga ko'chiramiz
+      district: h.city,
+      // GeoJSON Point (yaqin tarixiy joy/maskan topish uchun)
+      geo: (h.location?.lat && h.location?.lng)
+        ? { type: 'Point', coordinates: [h.location.lng, h.location.lat] }
+        : undefined,
+      // videoTour string bo'lsa — obyekt ko'rinishiga keltiramiz
+      videoTour: typeof h.videoTour === 'string'
+        ? { url: h.videoTour, captioned: false }
+        : h.videoTour,
+    }));
     await Hotel.insertMany(hotelsData);
+
+    // ── Tarixiy / diqqatga sazovor joylar ────────────────────────
+    await Attraction.deleteMany({});
+    const attractionsData = mockAttractions.map(a => ({
+      ...a,
+      createdBy: admin._id,
+      approved: true,
+      geo: (a.location?.lat && a.location?.lng)
+        ? { type: 'Point', coordinates: [a.location.lng, a.location.lat] }
+        : undefined,
+    }));
+    await Attraction.insertMany(attractionsData);
 
     const districts = [...new Set(mockHotels.map(h => h.city))];
     console.log(`🏨 ${mockHotels.length} ta maskan qo'shildi`);
+    console.log(`🏛️  ${mockAttractions.length} ta tarixiy joy qo'shildi`);
     console.log(`🗺️  ${districts.length} ta hudud: ${districts.join(', ')}`);
     console.log('✅ Seed muvaffaqiyatli yakunlandi!');
     process.exit(0);

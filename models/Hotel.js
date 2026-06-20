@@ -66,8 +66,15 @@ const hotelSchema = new mongoose.Schema({
     lat: Number,
     lng: Number
   },
+  // GeoJSON Point — tarixiy joyga eng yaqin maskanlarni topish uchun
+  geo: {
+    type:        { type: String, enum: ['Point'], default: 'Point' },
+    coordinates: { type: [Number], default: undefined }, // [lng, lat]
+  },
   address: String,
   city: String,
+  // Navoiy viloyatining 3 tumani — qidiruv/filtr uchun rasmiy maydon
+  district: { type: String, enum: ['Nurota', 'Xatirchi', 'Qiziltepa'] },
   country: String,
   distance: {
     airport: String,
@@ -184,5 +191,9 @@ hotelSchema.index({ 'accessibility.support.serviceAnimalFriendly': 1 });
 hotelSchema.index({ 'familyAndElderly.strollerAccessible': 1 });
 hotelSchema.index({ 'digitalInclusion.offlineDataSupport': 1 });
 hotelSchema.index({ city: 1, stars: 1, basePricePerNight: 1 });
+hotelSchema.index({ district: 1 });
+// Eslatma: yaqin maskanlar Haversine (location lat/lng) bilan hisoblanadi,
+// shu sababli 2dsphere indeks shart emas — koordinatasiz hujjatlarda
+// indeks xatosini oldini olish uchun olib tashlandi.
 
 export default mongoose.model('Hotel', hotelSchema);

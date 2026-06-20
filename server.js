@@ -15,6 +15,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { registerChatSocket } from './socket/chatSocket.js';
 import authRoutes from './routes/auth.js';
 import hotelRoutes from './routes/hotels.js';
+import attractionRoutes from './routes/attractions.js';
 import reviewRoutes from './routes/reviews.js';
 import adminRoutes from './routes/admin.js';
 import uploadRoutes from './routes/upload.js';
@@ -37,8 +38,17 @@ const io = new Server(httpServer, {
 app.use(helmet());
 app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
 
-// TODO: productiondan oldin rate-limit yoqish
-const authLimiter = (_req, _res, next) => next();
+// Auth endpointlari uchun rate-limit (brute-force himoyasi).
+// Testlarda o'chirish uchun: DISABLE_RATE_LIMIT=true
+const authLimiter = env.DISABLE_RATE_LIMIT
+  ? (_req, _res, next) => next()
+  : rateLimit({
+      windowMs: 15 * 60 * 1000,            // 15 daqiqa
+      max: 30,                              // har IP uchun 30 urinish
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { message: 'Juda ko\'p urinish. Iltimos, birozdan keyin qayta urinib ko\'ring.' },
+    });
 
 app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', express.static('uploads'));
@@ -107,6 +117,7 @@ app.use('/api/docs', swaggerUi.serve, (req, res) => {
 // ── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/auth',    authLimiter, authRoutes);
 app.use('/api/hotels',  hotelRoutes);
+app.use('/api/attractions', attractionRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin',   adminRoutes);
 app.use('/api/upload',  uploadRoutes);

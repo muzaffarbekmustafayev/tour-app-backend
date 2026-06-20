@@ -27,13 +27,15 @@ const ACC_MAP = {
 };
 
 export const getAllHotels = asyncHandler(async (req, res) => {
-  const { city, stars, minPrice, maxPrice, category, search } = req.query;
+  const { city, district, stars, minPrice, maxPrice, category, search, minRating } = req.query;
 
   const query = { approved: true };
 
   if (city)     query.city     = new RegExp(city, 'i');
+  if (district) query.district = district;
   if (stars)    query.stars    = Number(stars);
   if (category) query.category = category;
+  if (minRating) query.rating  = { $gte: Number(minRating) };
 
   if (minPrice || maxPrice) {
     query.basePricePerNight = {};
@@ -48,12 +50,18 @@ export const getAllHotels = asyncHandler(async (req, res) => {
     if (req.query[key] === 'true') query[path] = true;
   }
 
+  // Saralash — masalan ?sortBy=rating&order=desc (AIRecommendations buni ishlatadi)
+  const SORT_FIELDS = { rating: 'rating', price: 'basePricePerNight', createdAt: 'createdAt' };
+  const sortField = SORT_FIELDS[req.query.sortBy] || 'createdAt';
+  const sortDir = req.query.order === 'asc' ? 1 : -1;
+  const sort = { [sortField]: sortDir };
+
   const page  = Math.max(1, parseInt(req.query.page)  || 1);
   const limit = Math.min(50, parseInt(req.query.limit) || 12);
   const skip  = (page - 1) * limit;
 
   const [hotels, total] = await Promise.all([
-    Hotel.find(query).sort('-createdAt').skip(skip).limit(limit).select('-owner'),
+    Hotel.find(query).sort(sort).skip(skip).limit(limit).select('-owner'),
     Hotel.countDocuments(query),
   ]);
 
