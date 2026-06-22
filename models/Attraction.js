@@ -77,6 +77,14 @@ const attractionSchema = new mongoose.Schema({
     localTip:      String,
   },
 
+  // ── Pik (gavjum) va tinch vaqtlar — ixtiyoriy. Bo'sh bo'lsa, AI yordamchi
+  //    bestTimeOfDay/bestSeason + qoidalardan avtomatik hosil qiladi. ──
+  peakInfo: {
+    peak:  String,   // "Hafta oxiri 11:00–16:00, bayramlar"
+    quiet: String,   // "Erta tong va ish kunlari"
+    note:  String,   // "Juma kuni ziyoratchilar ko'p"
+  },
+
   bestSeason: String,
   entryFee:   String,
 

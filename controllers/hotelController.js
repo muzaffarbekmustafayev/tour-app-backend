@@ -1,6 +1,22 @@
 import Hotel from '../models/Hotel.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
-import { NotFoundError, ForbiddenError } from '../lib/errors.js';
+import { NotFoundError, ForbiddenError, BadRequestError } from '../lib/errors.js';
+
+// Navoiy viloyatining 3 tumani — barcha maskanlar shulardan biriga tegishli bo'lishi shart
+export const HOTEL_DISTRICTS = ['Nurota', 'Xatirchi', 'Qiziltepa'];
+
+// Forma'dan kelgan location'dan GeoJSON Point hosil qilish (yaqin tarixiy joy/maskan topish uchun)
+function normalizeGeo(body) {
+  const lat = Number(body?.location?.lat ?? body?.geo?.coordinates?.[1]);
+  const lng = Number(body?.location?.lng ?? body?.geo?.coordinates?.[0]);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    return {
+      location: { lat, lng },
+      geo: { type: 'Point', coordinates: [lng, lat] },
+    };
+  }
+  return {};
+}
 
 // Accessibility filtrlari xaritasi
 const ACC_MAP = {
@@ -76,10 +92,19 @@ export const getHotelById = asyncHandler(async (req, res) => {
 
 export const createHotel = asyncHandler(async (req, res) => {
   const isAdmin = req.user.role === 'ADMIN';
+
+  // Tuman majburiy — aynan 3 tumandan biri bo'lishi shart
+  if (!HOTEL_DISTRICTS.includes(req.body.district)) {
+    throw new BadRequestError('Tuman tanlanishi shart: Nurota, Xatirchi yoki Qiziltepa.');
+  }
+
   const hotelData = {
     ...req.body,
+    ...normalizeGeo(req.body),
     owner: (isAdmin && req.body.owner) ? req.body.owner : req.user.id,
-    approved: isAdmin, // Admin yaratsa — avtomatik tasdiqlash
+    // Admin qo'shsa — avtomatik tasdiqlanadi; owner qo'shsa — admin tasdig'ini kutadi
+    approved: isAdmin,
+    moderationStatus: isAdmin ? 'approved' : 'pending',
   };
 
   const hotel = new Hotel(hotelData);
@@ -95,10 +120,15 @@ export const updateHotel = asyncHandler(async (req, res) => {
     throw new ForbiddenError('Bu hotelni tahrirlash uchun ruxsatingiz yo\'q');
   }
 
-  // approved maydonini update orqali bypass qilishni oldini olish
+  // Tuman o'zgartirilsa — aynan 3 tumandan biri bo'lishi shart
+  if (req.body.district !== undefined && !HOTEL_DISTRICTS.includes(req.body.district)) {
+    throw new BadRequestError('Tuman tanlanishi shart: Nurota, Xatirchi yoki Qiziltepa.');
+  }
+
+  // approved maydonini update orqali bypass qilishni oldini olish + geo'ni qayta hisoblash
   const updatedHotel = await Hotel.findByIdAndUpdate(
     req.params.id,
-    { ...req.body, approved: hotel.approved },
+    { ...req.body, ...normalizeGeo(req.body), approved: hotel.approved },
     { new: true, runValidators: true }
   );
 

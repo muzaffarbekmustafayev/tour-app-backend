@@ -86,7 +86,10 @@ export const getNearbyStays = asyncHandler(async (req, res) => {
     result = hotels.filter((h) => h.district === attraction.district || h.city === attraction.district);
   }
 
-  res.json({ data: result, radiusKm: NEARBY_RADIUS_KM, total: result.length });
+  // Eng yaqin tunash joyi (masofa bo'yicha birinchi) — frontend uni avtomatik tanlaydi
+  const nearest = result[0] || null;
+
+  res.json({ data: result, nearest, radiusKm: NEARBY_RADIUS_KM, total: result.length });
 });
 
 // ── POST /api/attractions  (Admin) ──
