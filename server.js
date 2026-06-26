@@ -38,7 +38,10 @@ const httpServer = createServer(app);
 app.set('trust proxy', 1);
 
 // ── Socket.io ─────────────────────────────────────────────────────────────────
+// Diqqat: path `/api/socket.io/` — reverse-proxy (nginx) odatda faqat `/api` ni
+// backendga uzatadi. Default `/socket.io` proxy qilinmagani uchun ulanish uzilardi.
 const io = new Server(httpServer, {
+  path: '/api/socket.io/',
   cors: { origin: env.CLIENT_URL, credentials: true },
 });
 
@@ -60,17 +63,22 @@ const authLimiter = env.DISABLE_RATE_LIMIT
 
 app.use(express.json({ limit: '10mb' }));
 
-// Yuklangan rasm/videolar. Diqqat: helmet sukut bo'yicha
-// `Cross-Origin-Resource-Policy: same-origin` qo'yadi — bu frontend boshqa
-// domenda bo'lsa <img> ni bloklaydi ("image topilmayabdi"ning asosiy sababi).
-// Shu sabab bu papka uchun CORP'ni `cross-origin` ga o'zgartiramiz.
-app.use('/uploads', express.static(UPLOADS_DIR, {
+// Yuklangan rasm/videolar.
+//  - helmet sukut bo'yicha `Cross-Origin-Resource-Policy: same-origin` qo'yadi —
+//    bu frontend boshqa domenda bo'lsa <img> ni bloklaydi. Shu sabab CORP'ni
+//    `cross-origin` ga o'zgartiramiz.
+//  - Ikkala yo'lda ham tarqatamiz: `/uploads` (to'g'ridan-to'g'ri) va
+//    `/api/uploads`. Reverse-proxy (nginx) ko'pincha faqat `/api` ni backendga
+//    uzatadi — shuning uchun rasmlar `/api/uploads/<fayl>` orqali ishonchli yetadi.
+const uploadsStatic = express.static(UPLOADS_DIR, {
   maxAge: '7d',
   setHeaders: (res) => {
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Cross-Origin-Resource-Policy', 'cross-origin');
   },
-}));
+});
+app.use('/uploads', uploadsStatic);
+app.use('/api/uploads', uploadsStatic);
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
