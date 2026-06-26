@@ -9,6 +9,11 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { mkdirSync } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
 
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -24,10 +29,13 @@ import assistantRoutes from './routes/assistant.js';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 
-mkdirSync('uploads', { recursive: true });
+mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const app = express();
 const httpServer = createServer(app);
+
+// Reverse-proxy (Nginx/Render/Railway...) ortida to'g'ri protokol/IP aniqlash uchun
+app.set('trust proxy', 1);
 
 // ── Socket.io ─────────────────────────────────────────────────────────────────
 const io = new Server(httpServer, {
@@ -51,7 +59,18 @@ const authLimiter = env.DISABLE_RATE_LIMIT
     });
 
 app.use(express.json({ limit: '10mb' }));
-app.use('/uploads', express.static('uploads'));
+
+// Yuklangan rasm/videolar. Diqqat: helmet sukut bo'yicha
+// `Cross-Origin-Resource-Policy: same-origin` qo'yadi — bu frontend boshqa
+// domenda bo'lsa <img> ni bloklaydi ("image topilmayabdi"ning asosiy sababi).
+// Shu sabab bu papka uchun CORP'ni `cross-origin` ga o'zgartiramiz.
+app.use('/uploads', express.static(UPLOADS_DIR, {
+  maxAge: '7d',
+  setHeaders: (res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  },
+}));
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
