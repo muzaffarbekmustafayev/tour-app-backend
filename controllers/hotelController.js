@@ -2,8 +2,12 @@ import Hotel from '../models/Hotel.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../lib/errors.js';
 
-// Navoiy viloyatining 3 tumani — barcha maskanlar shulardan biriga tegishli bo'lishi shart
-export const HOTEL_DISTRICTS = ['Nurota', 'Xatirchi', 'Qiziltepa'];
+// Navoiy viloyatining barcha tuman va shaharlari
+export const HOTEL_DISTRICTS = [
+  'Navoiy shahri', 'Zarafshon shahri', 'G\'ozg\'on shahri',
+  'Karmana', 'Qiziltepa', 'Navbahor', 'Nurota', 
+  'Tomdi', 'Uchquduq', 'Xatirchi', 'Konimex'
+];
 
 // Forma'dan kelgan location'dan GeoJSON Point hosil qilish (yaqin tarixiy joy/maskan topish uchun)
 function normalizeGeo(body) {
@@ -93,9 +97,9 @@ export const getHotelById = asyncHandler(async (req, res) => {
 export const createHotel = asyncHandler(async (req, res) => {
   const isAdmin = req.user.role === 'ADMIN';
 
-  // Tuman majburiy — aynan 3 tumandan biri bo'lishi shart
+  // Tuman majburiy — viloyat tumanlaridan biri bo'lishi shart
   if (!HOTEL_DISTRICTS.includes(req.body.district)) {
-    throw new BadRequestError('Tuman tanlanishi shart: Nurota, Xatirchi yoki Qiziltepa.');
+    throw new BadRequestError('Tuman noto\'g\'ri tanlandi yoki mavjud emas.');
   }
 
   const hotelData = {
@@ -120,9 +124,9 @@ export const updateHotel = asyncHandler(async (req, res) => {
     throw new ForbiddenError('Bu hotelni tahrirlash uchun ruxsatingiz yo\'q');
   }
 
-  // Tuman o'zgartirilsa — aynan 3 tumandan biri bo'lishi shart
+  // Tuman o'zgartirilsa — viloyat tumanlaridan biri bo'lishi shart
   if (req.body.district !== undefined && !HOTEL_DISTRICTS.includes(req.body.district)) {
-    throw new BadRequestError('Tuman tanlanishi shart: Nurota, Xatirchi yoki Qiziltepa.');
+    throw new BadRequestError('Tuman noto\'g\'ri tanlandi yoki mavjud emas.');
   }
 
   // approved maydonini update orqali bypass qilishni oldini olish + geo'ni qayta hisoblash

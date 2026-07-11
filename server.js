@@ -55,9 +55,10 @@ const authLimiter = env.DISABLE_RATE_LIMIT
   ? (_req, _res, next) => next()
   : rateLimit({
       windowMs: 15 * 60 * 1000,            // 15 daqiqa
-      max: 30,                              // har IP uchun 30 urinish
+      max: 100,                             // har IP uchun 100 urinish
       standardHeaders: true,
       legacyHeaders: false,
+      skip: (req) => req.path === '/me' || req.path === '/logout',
       message: { message: 'Juda ko\'p urinish. Iltimos, birozdan keyin qayta urinib ko\'ring.' },
     });
 
