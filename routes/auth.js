@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
-import { register, login, googleLogin, getMe, updateProfile, addFavorite, removeFavorite, getFavorites } from '../controllers/authController.js';
+import { register, login, googleLogin, getMe, updateProfile, addFavorite, removeFavorite, getFavorites, forgotPassword } from '../controllers/authController.js';
 
 const router = express.Router();
 
@@ -54,5 +54,6 @@ router.put('/me', authenticate, updateProfile);
 router.post('/favorites/:hotelId', authenticate, addFavorite);
 router.delete('/favorites/:hotelId', authenticate, removeFavorite);
 router.get('/favorites', authenticate, getFavorites);
+router.post('/forgot-password', forgotPassword);
 
 export default router;

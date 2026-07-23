@@ -485,6 +485,26 @@ export const askAssistant = asyncHandler(async (req, res) => {
     });
   }
 
+  // ── 0.1.5) UMUMIY MA'LUMOT (Navoiy, tarix, transport, taom) ──────
+  if (/navoiy( haqida| tarixi| qayerda| viloyati| iqlimi)/.test(text)) {
+    return res.json({
+      reply: "Navoiy viloyati O'zbekistonning markazida joylashgan bo'lib, o'zining boy tarixi, Qizilqum cho'li, Aydarko'l va Nurota tog'lari bilan mashhur. Iqlimi kontinental, yozda issiq, qishda sovuq. Asosan sanoat, konchilik va turizm rivojlangan.",
+      suggestions: ['Tarixiy joylar', '3 kunlik plan yoz']
+    });
+  }
+  if (/transport|poezd|avtobus|samolyot|aeroport|qanday bor|yetib bor|taksi/.test(text)) {
+    return res.json({
+      reply: "Transport 🚆✈️\nNavoiy shahriga Toshkentdan yoki boshqa viloyatlardan «Afrosiyob» tezyurar poyezdi, samolyot (Navoiy xalqaro aeroporti) yoki avtobus/taksi orqali qulay yetib olish mumkin. Viloyat ichida esa taksi va mikroavtobuslar qatnaydi.",
+      suggestions: ['Navoiy haqida', 'Arzon mehmonxona']
+    });
+  }
+  if (/taom|ovqat|milliy|osh|somsa|tandir|shashlik|nima yey|suvenir|sovg'a|sovga/.test(text)) {
+    return res.json({
+      reply: "Milliy taomlar va Suvenirlar 🍢\nNavoiy viloyati, ayniqsa Nurota tumani o'zining mashhur «Tandir go'sht» va chashma suvida tayyorlangan turli milliy taomlari bilan ajralib turadi. Suvenir sifatida Nurotaning milliy kashtachilik mahsulotlari (so'zanalar) va sopol idishlarini xarid qilishingiz mumkin.",
+      suggestions: ['Atrofda nima bor', 'Tarixiy joylar']
+    });
+  }
+
   // ── 0.2) PLATFORMA FAQ — qanday ishlaydi ────────────────────────
   if (/qanday bron|bron qil|buyurtma|qanday band|joy band|book\b/.test(text)) {
     return res.json({
@@ -886,7 +906,7 @@ export const askAssistant = asyncHandler(async (req, res) => {
     if (stay) {
       lines.push('', `🛏️ Eng yaqin tunash joyi: ${stay.name}${Number.isFinite(stay.distanceKm) ? ` (~${stay.distanceKm} km)` : ''}.`);
     }
-    lines.push('', "Joyni ochib 360° video va atrofdagilarni ko'ring, pastida yaqin tunash maskanlari chiqadi.");
+    lines.push('', "Joyni ochib atrofdagilarni ko'ring, pastida yaqin tunash maskanlari chiqadi.");
     return res.json({
       reply: lines.join('\n'),
       attractions: top.map(toAttractionCard),

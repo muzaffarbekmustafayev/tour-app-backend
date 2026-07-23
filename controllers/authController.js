@@ -174,3 +174,20 @@ export const login = asyncHandler(async (req, res) => {
     },
   });
 });
+
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  if (!email) throw new BadRequestError('Email manzil majburiy');
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    // Xavfsizlik qoidasi: email tizimda bo'lmasa ham bir xil xabar qaytariladi
+    return res.json({ message: "Agar bu email ro'yxatdan o'tgan bo'lsa, parolni tiklash havolasi yuborildi." });
+  }
+
+  // Bu yerda aslida nodemailer yordamida haqiqiy email yuboriladi
+  // const resetToken = jwt.sign({ id: user._id }, env.JWT_SECRET, { expiresIn: '15m' });
+  // await sendEmail(email, 'Parolni tiklash', `Havola: .../reset?token=${resetToken}`);
+
+  res.json({ message: "Parolni tiklash havolasi email manzilga yuborildi." });
+});
