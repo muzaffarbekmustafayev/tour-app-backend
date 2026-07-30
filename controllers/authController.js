@@ -89,20 +89,52 @@ export const register = asyncHandler(async (req, res) => {
  * Frontend: useGoogleLogin (implicit flow) → access_token → POST /api/auth/google
  */
 export const googleLogin = asyncHandler(async (req, res) => {
-  const { access_token } = req.body;
-  if (!access_token) throw new BadRequestError('Google token topilmadi');
+  const { access_token, id_token, idToken, token: genericToken } = req.body || {};
+  const accessToken = access_token || (typeof req.body === 'string' ? req.body : null);
+  const idTok = id_token || idToken;
 
-  const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-    headers: { Authorization: `Bearer ${access_token}` },
-  });
-
-  if (!googleRes.ok) {
-    throw new UnauthorizedError("Google token yaroqsiz yoki muddati o'tgan");
+  if (!accessToken && !idTok && !genericToken) {
+    throw new BadRequestError('Google token topilmadi');
   }
 
-  const { sub: googleId, email, name, picture, email_verified } = await googleRes.json();
+  let googleId, email, name, picture, email_verified;
 
-  if (!email) throw new BadRequestError('Google hisobda email topilmadi');
+  // 1-usul: access_token bilan Userinfo API ga so'rov
+  if (accessToken) {
+    try {
+      const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (googleRes.ok) {
+        const info = await googleRes.json();
+        googleId = info.sub;
+        email = info.email;
+        name = info.name;
+        picture = info.picture;
+        email_verified = info.email_verified;
+      }
+    } catch {}
+  }
+
+  // 2-usul: id_token bo'lsa tokeninfo API orqali tekshirish (fallback)
+  if (!email && (idTok || genericToken)) {
+    try {
+      const targetToken = idTok || genericToken;
+      const tokenRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${targetToken}`);
+      if (tokenRes.ok) {
+        const info = await tokenRes.json();
+        googleId = info.sub;
+        email = info.email;
+        name = info.name;
+        picture = info.picture;
+        email_verified = info.email_verified === 'true' || info.email_verified === true;
+      }
+    } catch {}
+  }
+
+  if (!email) {
+    throw new UnauthorizedError("Google token yaroqsiz yoki muddati o'tgan");
+  }
 
   // Mavjud foydalanuvchini topish (googleId yoki email bo'yicha)
   let user = await User.findOne({ $or: [{ googleId }, { email }] });

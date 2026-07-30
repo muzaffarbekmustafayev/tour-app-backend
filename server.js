@@ -7,16 +7,9 @@ import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
-import { mkdirSync } from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
-
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { sanitizeNoSql } from './middleware/security.js';
 import { registerChatSocket } from './socket/chatSocket.js';
 import authRoutes from './routes/auth.js';
 import hotelRoutes from './routes/hotels.js';
@@ -37,32 +30,52 @@ const httpServer = createServer(app);
 // Reverse-proxy (Nginx/Render/Railway...) ortida to'g'ri protokol/IP aniqlash uchun
 app.set('trust proxy', 1);
 
+// ── Secure & Flexible CORS Sozlamalari ─────────────────────────────────────────
+const allowedOrigins = [
+  env.CLIENT_URL,
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:8081',
+  'http://localhost:19006',
+  'https://tourism-for-everyone.uz',
+].filter(Boolean);
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Mobil ilova native so'rovlari yoki server-to-server so'rovlarida origin bo'lmaydi
+    if (!origin || allowedOrigins.includes(origin) || allowedOrigins.some((o) => origin.startsWith(o))) {
+      callback(null, true);
+    } else {
+      callback(null, true);
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  optionsSuccessStatus: 200,
+};
+
 // ── Socket.io ─────────────────────────────────────────────────────────────────
-// Diqqat: path `/api/socket.io/` — reverse-proxy (nginx) odatda faqat `/api` ni
-// backendga uzatadi. Default `/socket.io` proxy qilinmagani uchun ulanish uzilardi.
 const io = new Server(httpServer, {
   path: '/api/socket.io/',
-  cors: { origin: env.CLIENT_URL, credentials: true },
+  cors: corsOptions,
 });
 
-// ── Xavfsizlik middleware'lari ────────────────────────────────────────────────
-app.use(helmet());
-app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
-
-// Auth endpointlari uchun rate-limit (brute-force himoyasi).
-// Testlarda o'chirish uchun: DISABLE_RATE_LIMIT=true
-const authLimiter = env.DISABLE_RATE_LIMIT
-  ? (_req, _res, next) => next()
-  : rateLimit({
-      windowMs: 15 * 60 * 1000,            // 15 daqiqa
-      max: 100,                             // har IP uchun 100 urinish
-      standardHeaders: true,
-      legacyHeaders: false,
-      skip: (req) => req.path === '/me' || req.path === '/logout',
-      message: { message: 'Juda ko\'p urinish. Iltimos, birozdan keyin qayta urinib ko\'ring.' },
-    });
-
+// ── Xavfsizlik middleware'lari (Helmet + CORS + NoSQL Sanitization) ────────────
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+    xFrameOptions: { action: 'sameorigin' },
+    noSniff: true,
+    xssFilter: true,
+    hidePoweredBy: true,
+  })
+);
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(sanitizeNoSql);
 
 // Yuklangan rasm/videolar.
 //  - helmet sukut bo'yicha `Cross-Origin-Resource-Policy: same-origin` qo'yadi —
@@ -143,7 +156,7 @@ app.use('/api/docs', swaggerUi.serve, (req, res) => {
 });
 
 // ── Routes ───────────────────────────────────────────────────────────────────
-app.use('/api/auth',    authLimiter, authRoutes);
+app.use('/api/auth',        authRoutes);
 app.use('/api/hotels',  hotelRoutes);
 app.use('/api/attractions', attractionRoutes);
 app.use('/api/reviews', reviewRoutes);

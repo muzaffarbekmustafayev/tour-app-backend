@@ -607,7 +607,7 @@ export const askAssistant = asyncHandler(async (req, res) => {
     const plan = buildPlan(days, hotels, attractions);
     const lines = [`📅 ${days} kunlik inklyuziv sayohat rejasi (Navoiy viloyati):`, ''];
     for (const d of plan) {
-      lines.push(`${d.day}-kun — ${d.district} tumani`);
+      lines.push(`${d.day}-kun — ${d.district === 'Navoiy' ? 'Navoiy viloyati' : d.district + ' tumani'}`);
       if (d.places.length) lines.push(`   🏛️ Ko'riladigan joylar: ${d.places.join(', ')}`);
       if (d.stay) lines.push(`   🛏️ Tunash: ${d.stay.name} (⭐${d.stay.rating?.toFixed?.(1) || d.stay.rating})`);
       lines.push('');
@@ -821,7 +821,7 @@ export const askAssistant = asyncHandler(async (req, res) => {
       return res.json({ reply: "Hozircha tarixiy joy ma'lumoti yo'q.", suggestions: SUGGESTIONS });
     }
     const top = pool.slice(0, 3);
-    const lines = [`⏰ Tashrif uchun pik (gavjum) va tinch vaqtlar${mentionedDistrict ? ` — ${mentionedDistrict} tumani` : ''}:`, ''];
+    const lines = [`⏰ Tashrif uchun pik (gavjum) va tinch vaqtlar${mentionedDistrict ? (mentionedDistrict === 'Navoiy' ? ' — Navoiy viloyati' : ` — ${mentionedDistrict} tumani`) : ''}:`, ''];
     for (const a of top) {
       const pt = peakTimesFor(a);
       lines.push(`🏛️ ${a.name}`);
@@ -958,7 +958,7 @@ export const askAssistant = asyncHandler(async (req, res) => {
     const topHotel = best[0];
     const price = cheapestPrice(topHotel);
     return res.json({
-      reply: `Eng yaxshi tanlov${mentionedDistrict ? ` ${mentionedDistrict} tumanida` : ''}: ${topHotel.name} (⭐${topHotel.rating?.toFixed?.(1) || topHotel.rating})${price ? `, ${fmtSom(price)} dan/kecha` : ''}.`,
+      reply: `Eng yaxshi tanlov${mentionedDistrict ? (mentionedDistrict === 'Navoiy' ? ' Navoiy viloyatida' : ` ${mentionedDistrict} tumanida`) : ''}: ${topHotel.name} (⭐${topHotel.rating?.toFixed?.(1) || topHotel.rating})${price ? `, ${fmtSom(price)} dan/kecha` : ''}.`,
       hotels: best.slice(0, 4).map(toHotelCard),
     });
   }
