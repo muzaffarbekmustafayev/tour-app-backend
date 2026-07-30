@@ -62,7 +62,14 @@ const applySynonyms = (t) =>
     .replace(/\b(konditsioner|konditsion|sovutgich|kanditsioner)\b/g, 'konditsioner')
     .replace(/\b(to'lov|tulov|to'lash|tulash|to'layman)\b/g, 'tolov')
     .replace(/\b(yulduzli|yulduzlik|yulduzi)\b/g, 'yulduz')
-    .replace(/\b(telefoni|telefon raqami|raqami|raqam|nomeri)\b/g, 'telefon');
+    .replace(/\b(telefoni|telefon raqami|raqami|raqam|nomeri)\b/g, 'telefon')
+    .replace(/\b(kuchuk|kuchug|mushuk|hayvon|uy hayvoni|pet|pets)\b/g, 'hayvon')
+    .replace(/\b(bolalar|farzand|oila|oilam|chaqaloq|bolam|bolasi|bola)\b/g, 'bola')
+    .replace(/\b(rus|ruscha|orisi|rus tili)\b/g, 'rus')
+    .replace(/\b(ingliz|inglizcha|english|ingliz tili)\b/g, 'ingliz')
+    .replace(/\b(markaz|gorod|sentr|center)\b/g, 'markaz')
+    .replace(/\b(aeroport|ayraport|tayyora)\b/g, 'aeroport')
+    .replace(/\b(vokzal|vaxzal|stansiya|poezd)\b/g, 'vokzal');
 
 // ── Pul formatlash: 720000 → "720 000 so'm" ──────────────────────────
 const fmtSom = (n) =>
@@ -206,8 +213,10 @@ const AMENITIES = [
   { re: /xona xizmati|room service|nomer xizmati/, keys: ['room service'], label: 'Xona xizmati' },
   { re: /24 soat|24\/7|resepshn|kechayu-kunduz|tunu kun|reception/, keys: ['reception', '24'], label: '24 soat qabul' },
   { re: /gulxan|\bolov\b|bonfire|gulhan/, keys: ['bonfire'], label: 'Gulxan (bonfire)' },
-  { re: /hiking|sayr|trekking|piyoda yurish|tog' yurish/, keys: ['hiking'], label: 'Hiking / tog' },
+  { re: /hiking|sayr|trekking|piyoda yurish|tog' yurish/, keys: ['hiking'], label: 'Hiking / tog\'' },
   { re: /oshxona|kitchen/, keys: ['kitchen'], label: 'Umumiy oshxona' },
+  { re: /nonushta|zavtrak|breakfast/, keys: ['breakfast', 'food'], label: 'Nonushta' },
+  { re: /transfer|kutib olish|shofyor/, keys: ['shuttle', 'transfer', 'airport'], label: 'Transfer xizmati' },
 ];
 
 const hotelHasAmenity = (h, keys) =>
@@ -243,6 +252,15 @@ function extractConstraints(text) {
   if (/oilaviy|family/.test(text)) { c.roomType = 'Family Room'; c.signals++; }
   else if (/lyuks|suite|vip|luxury/.test(text)) { c.luxuryRoom = true; c.signals++; }
 
+  if (/\bhoyvon\b|kuchuk|mushuk|hayvon|uy hayvoni/.test(text)) { c.petsAllowed = true; c.signals++; }
+  if (/\bbola\b|bolalar|chaqaloq|farzand/.test(text)) { c.kidFriendly = true; c.signals++; }
+  if (/\bmarkaz\b/.test(text)) { c.distance = 'cityCenter'; c.signals++; }
+  else if (/\baeroport\b/.test(text)) { c.distance = 'airport'; c.signals++; }
+  else if (/\bvokzal\b/.test(text)) { c.distance = 'trainStation'; c.signals++; }
+
+  if (/\brus\b|ruscha|orisi/.test(text)) { c.language = 'rus'; c.signals++; }
+  else if (/\bingliz\b|inglizcha/.test(text)) { c.language = 'ingliz'; c.signals++; }
+
   let method = null;
   if (/click/.test(text)) method = 'click';
   else if (/payme/.test(text)) method = 'payme';
@@ -262,6 +280,12 @@ function applyConstraints(hotels, c) {
   if (c.minCapacity) list = list.filter((h) => (h.rooms || []).some((r) => (r.capacity || 0) >= c.minCapacity));
   if (c.roomType) list = list.filter((h) => (h.rooms || []).some((r) => r.roomType === c.roomType));
   if (c.luxuryRoom) list = list.filter((h) => (h.rooms || []).some((r) => /suite|luxury|vip/i.test(r.category || '')));
+  
+  if (c.petsAllowed) list = list.filter((h) => h.policies?.petsAllowed);
+  if (c.kidFriendly) list = list.filter((h) => h.familyAndElderly?.strollerAccessible || (h.rooms || []).some((r) => r.roomType === 'Family Room'));
+  if (c.distance) list = list.filter((h) => h.distance && h.distance[c.distance]);
+  if (c.language) list = list.filter((h) => (h.languages || []).some((l) => l.toLowerCase().includes(c.language)));
+
   if (c.payment) list = list.filter((h) => (h.paymentMethods || []).some((p) => p.toLowerCase().includes(c.payment)));
   if (Number.isFinite(c.maxPrice)) list = list.filter((h) => { const p = cheapestPrice(h); return p != null && p <= c.maxPrice; });
 
@@ -281,6 +305,12 @@ function describeConstraints(c) {
   if (c.roomType) parts.push('oilaviy xona');
   if (c.luxuryRoom) parts.push('lyuks xona');
   if (c.minCapacity) parts.push(`${c.minCapacity}+ kishilik`);
+  if (c.petsAllowed) parts.push('hayvonlarga ruxsat');
+  if (c.kidFriendly) parts.push('bolalar uchun');
+  if (c.distance === 'cityCenter') parts.push('markazga yaqin');
+  else if (c.distance === 'airport') parts.push('aeroportga yaqin');
+  else if (c.distance === 'trainStation') parts.push('vokzalga yaqin');
+  if (c.language) parts.push(`${c.language === 'rus' ? 'Rus' : 'Ingliz'} tilida`);
   if (c.payment) parts.push(c.payment[0].toUpperCase() + c.payment.slice(1));
   if (Number.isFinite(c.maxPrice)) parts.push(`${fmtSom(c.maxPrice)} gacha`);
   else if (c.cheapest) parts.push('arzon');
@@ -502,6 +532,12 @@ export const askAssistant = asyncHandler(async (req, res) => {
     return res.json({
       reply: "Milliy taomlar va Suvenirlar 🍢\nNavoiy viloyati, ayniqsa Nurota tumani o'zining mashhur «Tandir go'sht» va chashma suvida tayyorlangan turli milliy taomlari bilan ajralib turadi. Suvenir sifatida Nurotaning milliy kashtachilik mahsulotlari (so'zanalar) va sopol idishlarini xarid qilishingiz mumkin.",
       suggestions: ['Atrofda nima bor', 'Tarixiy joylar']
+    });
+  }
+  if (/ob-?havo|iqlim|qanday kiyim|nima kiy|sovuqmi|issiqmi|fasl|havo qanday/.test(text)) {
+    return res.json({
+      reply: "Ob-havo va Kiyim-kechak 🌤️👕\nNavoiy iqlimi keskin kontinental. Yozda juda issiq (+40°C gacha), yengil paxta kiyimlar, bosh kiyim va ko'zoynak olishni unutmang. Qishda esa sovuq va shamolli bo'lishi mumkin, qalin kurtka tavsiya etiladi. Bahor va kuz sayohat uchun eng zo'r vaqt (yengil kurtka yoki sviter yetarli).",
+      suggestions: ['Qachon borish yaxshi?', 'Tarixiy joylar']
     });
   }
 
