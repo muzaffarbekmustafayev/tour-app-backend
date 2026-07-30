@@ -21,8 +21,15 @@ import chatRoutes from './routes/chat.js';
 import assistantRoutes from './routes/assistant.js';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-mkdirSync(UPLOADS_DIR, { recursive: true });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const app = express();
 const httpServer = createServer(app);
