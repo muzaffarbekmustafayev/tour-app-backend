@@ -8,7 +8,11 @@ import mongoose from 'mongoose';
  * unga yaqin tunash maskanlarini (Hotel) tavsiya qilish. Bron yo'q.
  */
 
-const DISTRICTS = ['Nurota', 'Xatirchi', 'Qiziltepa'];
+const DISTRICTS = [
+  'Navoiy shahri', 'Zarafshon shahri', 'G\'ozg\'on shahri',
+  'Karmana', 'Qiziltepa', 'Navbahor', 'Nurota', 
+  'Tomdi', 'Uchquduq', 'Xatirchi', 'Konimex'
+];
 
 // Tarixiy joyga qoldirilgan sharhlar (embedded)
 const attractionReviewSchema = new mongoose.Schema({

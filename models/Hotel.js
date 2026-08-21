@@ -89,7 +89,7 @@ const hotelSchema = new mongoose.Schema({
     trainStation: String,
     cityCenter: String
   },
-  category: { type: String, enum: ['hotel', 'resort', 'hostel'] },
+  category: { type: String, enum: ['hotel', 'resort', 'hostel', 'boutique', 'motel', 'guesthouse'] },
   stars: { type: Number, min: 1, max: 5 },
   basePricePerNight: Number,   // Ma'lumotnoma narxi
   rooms: [roomSchema],
