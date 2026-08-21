@@ -73,8 +73,16 @@ const hotelSchema = new mongoose.Schema({
   },
   address: String,
   city: String,
-  // Navoiy viloyatining 3 tumani — qidiruv/filtr uchun rasmiy MAJBURIY maydon
-  district: { type: String, enum: ['Nurota', 'Xatirchi', 'Qiziltepa'], required: true },
+  // Navoiy viloyatining barcha tuman va shaharlari
+  district: { 
+    type: String, 
+    enum: [
+      'Navoiy shahri', 'Zarafshon shahri', 'G\'ozg\'on shahri',
+      'Karmana', 'Qiziltepa', 'Navbahor', 'Nurota', 
+      'Tomdi', 'Uchquduq', 'Xatirchi', 'Konimex'
+    ], 
+    required: true 
+  },
   country: String,
   distance: {
     airport: String,
