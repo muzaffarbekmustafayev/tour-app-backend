@@ -264,6 +264,7 @@ export const createHotel = asyncHandler(async (req, res) => {
 
   const hotel = new Hotel(hotelData);
   await hotel.save();
+  await hotel.populate('owner', 'name email phone');
   res.status(201).json(hotel);
 });
 
@@ -298,7 +299,7 @@ export const updateHotel = asyncHandler(async (req, res) => {
     req.params.id,
     { ...sanitized, approved: hotel.approved, moderationStatus: hotel.moderationStatus },
     { new: true, runValidators: true }
-  );
+  ).populate('owner', 'name email phone');
 
   res.json(updatedHotel);
 });
