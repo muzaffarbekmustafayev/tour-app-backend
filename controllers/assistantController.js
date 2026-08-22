@@ -32,7 +32,11 @@ import Attraction from '../models/Attraction.js';
  *   • Imlo/sinonim bardosh + tushunmaganda aniq takliflar
  */
 
-const DISTRICTS = ['Nurota', 'Xatirchi', 'Qiziltepa'];
+const DISTRICTS = [
+  'Navoiy shahri', 'Zarafshon shahri', "G'ozg'on shahri",
+  'Karmana', 'Qiziltepa', 'Navbahor', 'Nurota', 
+  'Tomdi', 'Uchquduq', 'Xatirchi', 'Konimex'
+];
 
 // Navoiy viloyati uchun umumiy mavsum maslahati (joyda bestSeason bo'lmasa)
 const REGION_SEASON =
@@ -581,9 +585,25 @@ export const askAssistant = asyncHandler(async (req, res) => {
   }
 
   // Tuman filtri
-  const mentionedDistrict = DISTRICTS.find((d) => text.includes(d.toLowerCase()));
-  let hotelPool = mentionedDistrict ? hotels.filter((h) => (h.district || h.city) === mentionedDistrict) : hotels;
-  let attractionPool = mentionedDistrict ? attractions.filter((a) => a.district === mentionedDistrict) : attractions;
+  const mentionedDistrict = DISTRICTS.find((d) => {
+    const dLower = d.toLowerCase();
+    const dShort = dLower.replace(/ shahri$/i, '').trim();
+    return text.includes(dLower) || text.includes(dShort);
+  });
+  let hotelPool = mentionedDistrict 
+    ? hotels.filter((h) => {
+        const hDist = (h.district || h.city || '').toLowerCase();
+        const dShort = mentionedDistrict.toLowerCase().replace(/ shahri$/i, '').trim();
+        return hDist.includes(dShort);
+      }) 
+    : hotels;
+  let attractionPool = mentionedDistrict 
+    ? attractions.filter((a) => {
+        const aDist = (a.district || '').toLowerCase();
+        const dShort = mentionedDistrict.toLowerCase().replace(/ shahri$/i, '').trim();
+        return aDist.includes(dShort);
+      }) 
+    : attractions;
 
   // ── 0.3) NOM bo'yicha aniq maskan/joy (entity lookup) ───────────
   // Agar so'rov aniq bir maskan/joy nomiga mos kelsa — javobni o'shanga qaratamiz.

@@ -20,15 +20,73 @@ function haversineKm(lat1, lng1, lat2, lng2) {
 
 // Forma'dan kelgan location yoki geo'dan GeoJSON koordinatani normallashtirish
 function normalizeGeo(body) {
-  const lat = Number(body?.location?.lat ?? body?.geo?.coordinates?.[1]);
-  const lng = Number(body?.location?.lng ?? body?.geo?.coordinates?.[0]);
-  if (Number.isFinite(lat) && Number.isFinite(lng)) {
-    return {
-      location: { lat, lng },
-      geo: { type: 'Point', coordinates: [lng, lat] },
-    };
+  const rawLat = body?.location?.lat ?? body?.geo?.coordinates?.[1];
+  const rawLng = body?.location?.lng ?? body?.geo?.coordinates?.[0];
+  if (
+    rawLat !== undefined && rawLat !== null && String(rawLat).trim() !== '' &&
+    rawLng !== undefined && rawLng !== null && String(rawLng).trim() !== ''
+  ) {
+    const lat = Number(rawLat);
+    const lng = Number(rawLng);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      return {
+        location: { lat, lng },
+        geo: { type: 'Point', coordinates: [lng, lat] },
+      };
+    }
   }
   return {};
+}
+
+function sanitizeAttractionPayload(body) {
+  const payload = { ...body };
+
+  if (body.images) {
+    payload.images = (Array.isArray(body.images) ? body.images : [body.images])
+      .filter((img) => typeof img === 'string' && img.trim() !== '');
+  }
+
+  if (body.shortDescription && !body.descriptionShort) {
+    payload.descriptionShort = body.shortDescription;
+  }
+  if (body.descriptionShort && !body.shortDescription) {
+    payload.shortDescription = body.descriptionShort;
+  }
+
+  // Atrofda aylanishga arzigulik nima bor (bo'sh qatorlar va noto'g'ri tiplardan tozalash)
+  if (Array.isArray(body.thingsToSeeAround)) {
+    const VALID_TYPES = ['tabiat', 'tarix', 'bozor', 'ovqat', 'diniy', 'boshqa'];
+    payload.thingsToSeeAround = body.thingsToSeeAround
+      .filter((t) => t && typeof t.title === 'string' && t.title.trim() !== '')
+      .map((t) => ({
+        title: t.title.trim(),
+        description: t.description ? String(t.description).trim() : '',
+        type: VALID_TYPES.includes(t.type) ? t.type : 'boshqa',
+        walkingMinutes: (t.walkingMinutes !== undefined && t.walkingMinutes !== '' && !isNaN(Number(t.walkingMinutes)))
+          ? Number(t.walkingMinutes)
+          : undefined,
+      }));
+  }
+
+  // 360 Video
+  if (body.video360 && typeof body.video360 === 'object') {
+    payload.video360 = {
+      url: body.video360.url || '',
+      type: body.video360.type === 'file' ? 'file' : 'youtube',
+      captioned: Boolean(body.video360.captioned),
+    };
+  }
+
+  // Panoramas
+  if (Array.isArray(body.panoramas)) {
+    payload.panoramas = body.panoramas.filter((p) => p && typeof p.url === 'string' && p.url.trim() !== '');
+  }
+
+  const geoData = normalizeGeo(body);
+  if (geoData.location) payload.location = geoData.location;
+  if (geoData.geo) payload.geo = geoData.geo;
+
+  return payload;
 }
 
 // ── GET /api/attractions  (Public) ──
@@ -36,7 +94,7 @@ export const getAllAttractions = asyncHandler(async (req, res) => {
   const { district, search } = req.query;
   const query = { approved: true };
 
-  if (district && ATTRACTION_DISTRICTS.includes(district)) query.district = district;
+  if (district) query.district = new RegExp(`^${district}$`, 'i');
   if (search) query.$text = { $search: search };
 
   const page  = Math.max(1, parseInt(req.query.page) || 1);
@@ -83,7 +141,11 @@ export const getNearbyStays = asyncHandler(async (req, res) => {
       .sort((a, b) => a.distanceKm - b.distanceKm);
   } else {
     // Koordinata yo'q bo'lsa — bir xil tumandagi maskanlarga qaytamiz
-    result = hotels.filter((h) => h.district === attraction.district || h.city === attraction.district);
+    const targetDistrict = (attraction.district || '').toLowerCase();
+    result = hotels.filter((h) => 
+      (h.district && h.district.toLowerCase() === targetDistrict) || 
+      (h.city && h.city.toLowerCase() === targetDistrict)
+    );
   }
 
   // Eng yaqin tunash joyi (masofa bo'yicha birinchi) — frontend uni avtomatik tanlaydi
@@ -94,9 +156,18 @@ export const getNearbyStays = asyncHandler(async (req, res) => {
 
 // ── POST /api/attractions  (Admin) ──
 export const createAttraction = asyncHandler(async (req, res) => {
+  if (!req.body.name || !req.body.name.trim()) {
+    throw new BadRequestError('Diqqatga sazovor joy nomi kiritilishi shart.');
+  }
+
+  if (!req.body.district || !ATTRACTION_DISTRICTS.includes(req.body.district)) {
+    throw new BadRequestError('Tuman noto\'g\'ri tanlandi yoki mavjud emas. Navoiy viloyati tumanlaridan birini tanlang.');
+  }
+
+  const sanitized = sanitizeAttractionPayload(req.body);
+
   const data = {
-    ...req.body,
-    ...normalizeGeo(req.body),
+    ...sanitized,
     approved: true,
     createdBy: req.user.id,
   };
@@ -114,7 +185,13 @@ export const updateAttraction = asyncHandler(async (req, res) => {
   const exists = await Attraction.findById(req.params.id);
   if (!exists) throw new NotFoundError('Tarixiy joy topilmadi');
 
-  const update = { ...req.body, ...normalizeGeo(req.body) };
+  if (req.body.district !== undefined && !ATTRACTION_DISTRICTS.includes(req.body.district)) {
+    throw new BadRequestError('Tuman noto\'g\'ri tanlandi yoki mavjud emas.');
+  }
+
+  const sanitized = sanitizeAttractionPayload(req.body);
+  const update = { ...sanitized };
+
   // Sharh/reyting maydonlari update orqali o'zgartirilmaydi
   delete update.reviews;
   delete update.rating;

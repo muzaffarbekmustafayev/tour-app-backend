@@ -27,6 +27,7 @@ const attractionSchema = new mongoose.Schema({
   district:    { type: String, enum: DISTRICTS, required: true },
   description: String,
   descriptionShort: String,
+  shortDescription: String,
 
   images: [String],
 

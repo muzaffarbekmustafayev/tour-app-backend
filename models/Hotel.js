@@ -1,21 +1,21 @@
 import mongoose from 'mongoose';
 
 const roomSchema = new mongoose.Schema({
-  name: { type: String, required: true },
+  name: { type: String, default: 'Standart Xona' },
   roomType: {
     type: String,
     enum: ['Single Room', 'Double Room', 'Triple Room', 'Quad Room', 'Family Room'],
-    required: true
+    default: 'Double Room'
   },
   category: {
     type: String,
     enum: ['Standard', 'Comfort', 'Deluxe', 'Suite', 'Luxury / VIP'],
-    required: true
+    default: 'Standard'
   },
-  capacity: { type: Number, required: true },
-  pricePerNight: { type: Number, required: true },
-  roomsAvailable: { type: Number, required: true },
-  totalRooms: { type: Number, required: true },
+  capacity: { type: Number, default: 2 },
+  pricePerNight: { type: Number, default: 500000 },
+  roomsAvailable: { type: Number, default: 1 },
+  totalRooms: { type: Number, default: 1 },
   areaSqMeters: Number,
   bedType: { type: String, enum: ['single bed', 'double bed', 'king size'] },
   amenities: [String],
@@ -36,6 +36,7 @@ const hotelSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: String,
   descriptionShort: String,
+  shortDescription: String,
   hotelChain: String,
   // ── Media ──────────────────────────────────────────────────────────────
   images: [String],
@@ -92,9 +93,15 @@ const hotelSchema = new mongoose.Schema({
   category: { type: String, enum: ['hotel', 'resort', 'hostel', 'boutique', 'motel', 'guesthouse'] },
   stars: { type: Number, min: 1, max: 5 },
   basePricePerNight: Number,   // Ma'lumotnoma narxi
+  pricePerNight: Number,
+  roomsAvailable: Number,
+  totalRooms: Number,
+  maxGuests: Number,
   rooms: [roomSchema],
   checkIn: String,
   checkOut: String,
+  checkInTime: String,
+  checkOutTime: String,
   openingYear: Number,
   renovatedYear: Number,
   languages: [String],
@@ -118,24 +125,32 @@ const hotelSchema = new mongoose.Schema({
       elevatorWidthCm: { type: Number, min: 0, max: 500 },
       accessibleRooms: { type: Boolean, default: false },
       accessibleParking: { type: Boolean, default: false },
-      accessibleToilet: { type: Boolean, default: false }
+      accessibleToilet: { type: Boolean, default: false },
+      elevator: { type: Boolean, default: false },
+      wideDoors: { type: Boolean, default: false },
+      showerSeat: { type: Boolean, default: false },
     },
     visual: {
       brailleSigns: { type: Boolean, default: false },
       tactilePaving: { type: Boolean, default: false },
+      tactileFlooring: { type: Boolean, default: false },
       highContrastSignage: { type: Boolean, default: false }
     },
     auditory: {
       audioGuides: { type: Boolean, default: false },
       hearingLoop: { type: Boolean, default: false },
+      hearingAssistance: { type: Boolean, default: false },
       vibrationAlerts: { type: Boolean, default: false },
-      signLanguageStaff: { type: Boolean, default: false }
+      signLanguageStaff: { type: Boolean, default: false },
+      signLanguage: { type: Boolean, default: false },
+      voiceAssistant: { type: Boolean, default: false },
     },
     cognitive: {
       quietZones: { type: Boolean, default: false },
       easyToReadSignage: { type: Boolean, default: false },
       consistentLayout: { type: Boolean, default: false },
-      sensoryFriendlyHours: { type: Boolean, default: false }
+      sensoryFriendlyHours: { type: Boolean, default: false },
+      emergencyButtons: { type: Boolean, default: false },
     },
     support: {
       serviceAnimalFriendly: { type: Boolean, default: false },
