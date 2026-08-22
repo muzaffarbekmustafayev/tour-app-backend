@@ -283,6 +283,16 @@ export const updateHotel = asyncHandler(async (req, res) => {
 
   const sanitized = sanitizeHotelPayload(req.body);
 
+  if (req.user.role === 'ADMIN') {
+    if (req.body.owner && String(req.body.owner).trim() !== '') {
+      sanitized.owner = req.body.owner;
+    } else if (req.body.owner === '') {
+      sanitized.owner = req.user.id;
+    }
+  } else {
+    delete sanitized.owner;
+  }
+
   // approved maydonini update orqali bypass qilishni oldini olish
   const updatedHotel = await Hotel.findByIdAndUpdate(
     req.params.id,
