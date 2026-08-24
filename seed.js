@@ -1152,17 +1152,27 @@ async function runImport() {
     await mongoose.connect(uri);
     console.log(`✅ Ulanish o'rnatildi! (${mongoose.connection.name} bazasi)`);
 
-    // 1. Admin va Owner foydalanuvchilarini tekshirish
-    let admin = await User.findOne({ role: 'ADMIN' });
+    // 1. Admin va Owner foydalanuvchilarini tekshirish va yaratish
+    const pass123 = await bcrypt.hash('123456', 10);
+    const passAdmin = await bcrypt.hash('admin123', 10);
+
+    let admin = await User.findOne({ email: 'a@gmail.com' });
     if (!admin) {
-      const pass = await bcrypt.hash('admin123', 10);
-      admin = await User.create({ name: 'Admin', email: 'admin@tour.uz', password: pass, role: 'ADMIN' });
+      admin = await User.create({ name: 'Admin', email: 'a@gmail.com', password: pass123, role: 'ADMIN', phone: '+998901234560' });
+    }
+    let admin2 = await User.findOne({ email: 'admin@tour.uz' });
+    if (!admin2) {
+      await User.create({ name: 'Admin Tour', email: 'admin@tour.uz', password: passAdmin, role: 'ADMIN', phone: '+998901234561' });
     }
 
-    let owner = await User.findOne({ role: 'HOTEL_OWNER' });
+    let owner = await User.findOne({ email: 'h@gmail.com' });
     if (!owner) {
-      const pass = await bcrypt.hash('owner123', 10);
-      owner = await User.create({ name: 'Hotel Owner', email: 'owner@tour.uz', password: pass, role: 'HOTEL_OWNER' });
+      owner = await User.create({ name: 'Hotel Owner', email: 'h@gmail.com', password: pass123, role: 'HOTEL_OWNER', phone: '+998901234562' });
+    }
+
+    let customer = await User.findOne({ email: 'c@gmail.com' });
+    if (!customer) {
+      await User.create({ name: 'Customer', email: 'c@gmail.com', password: pass123, role: 'CUSTOMER', phone: '+998901234563' });
     }
 
     // 2. Bazadagi eski ma'lumotlarni tozalash
