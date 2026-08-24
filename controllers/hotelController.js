@@ -4,9 +4,10 @@ import { NotFoundError, ForbiddenError, BadRequestError } from '../lib/errors.js
 
 // Navoiy viloyatining barcha tuman va shaharlari
 export const HOTEL_DISTRICTS = [
-  'Navoiy shahri', 'Zarafshon shahri', 'G\'ozg\'on shahri',
-  'Karmana', 'Qiziltepa', 'Navbahor', 'Nurota', 
-  'Tomdi', 'Uchquduq', 'Xatirchi', 'Konimex'
+  'Navoiy shahri',
+  'Nurota',
+  'Xatirchi',
+  'Qiziltepa'
 ];
 
 // Forma'dan kelgan location'dan GeoJSON Point hosil qilish (yaqin tarixiy joy/maskan topish uchun)

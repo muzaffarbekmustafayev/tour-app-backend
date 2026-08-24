@@ -78,9 +78,10 @@ const hotelSchema = new mongoose.Schema({
   district: { 
     type: String, 
     enum: [
-      'Navoiy shahri', 'Zarafshon shahri', 'G\'ozg\'on shahri',
-      'Karmana', 'Qiziltepa', 'Navbahor', 'Nurota', 
-      'Tomdi', 'Uchquduq', 'Xatirchi', 'Konimex'
+      'Navoiy shahri',
+      'Nurota',
+      'Xatirchi',
+      'Qiziltepa'
     ], 
     required: true 
   },

@@ -33,9 +33,10 @@ import Attraction from '../models/Attraction.js';
  */
 
 const DISTRICTS = [
-  'Navoiy shahri', 'Zarafshon shahri', "G'ozg'on shahri",
-  'Karmana', 'Qiziltepa', 'Navbahor', 'Nurota', 
-  'Tomdi', 'Uchquduq', 'Xatirchi', 'Konimex'
+  'Navoiy shahri',
+  'Nurota',
+  'Xatirchi',
+  'Qiziltepa'
 ];
 
 // Navoiy viloyati uchun umumiy mavsum maslahati (joyda bestSeason bo'lmasa)

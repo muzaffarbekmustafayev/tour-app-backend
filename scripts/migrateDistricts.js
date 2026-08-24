@@ -14,7 +14,7 @@ import mongoose from 'mongoose';
 import { env } from '../config/env.js';
 import Hotel from '../models/Hotel.js';
 
-const DISTRICTS = ['Nurota', 'Xatirchi', 'Qiziltepa'];
+const DISTRICTS = ['Navoiy shahri', 'Nurota', 'Xatirchi', 'Qiziltepa'];
 
 // Erkin yozilgan tuman/shahar nomini 3 tumandan biriga moslashtirishga urinish
 function guessDistrict(value) {

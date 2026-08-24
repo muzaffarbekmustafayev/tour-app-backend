@@ -241,6 +241,53 @@ const mockHotels = [
     ],
     paymentMethods: ["Payme", "Naqd"],
     approved: true
+  },
+  // ═══════════════════════════════════════════════════════════
+  // 4-HUDUD: NAVOIY SHAHRI — Alisher Navoiy bog'i, Muzey
+  // ═══════════════════════════════════════════════════════════
+  {
+    name: "Grand Navoiy Hotel",
+    description: "Navoiy shahri markazidagi biznes va sayyohlik maskani. Alisher Navoiy nomidagi milliy bog'ga yaqin, xalqaro inklyuzivlik standartlariga to'liq javob beruvchi zamonaviy 4 yulduzli mehmonxona.",
+    descriptionShort: "Shahar markazidagi 4 yulduzli zamonaviy inklyuziv mehmonxona.",
+    images: [
+      "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1000",
+      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&q=80&w=1000"
+    ],
+    rating: 4.8,
+    reviewsCount: 52,
+    location: { lat: 40.1012, lng: 65.3745 },
+    address: "Islom Karimov shoh ko'chasi 24",
+    city: "Navoiy shahri",
+    country: "O'zbekiston",
+    category: "hotel",
+    stars: 4,
+    basePricePerNight: 650000,
+    checkIn: "14:00",
+    checkOut: "12:00",
+    videoTour: "https://www.youtube.com/watch?v=ZZyBG6UsvoQ",
+    amenities: ["Free WiFi", "Restaurant", "Parking", "Spa", "Pool", "Gym", "Air Conditioning"],
+    security: ["24/7 Qo'riqlash", "CCTV", "Yong'in xavfsizligi"],
+    accessibility: {
+      mobility: { wheelchairAccessible: true, stepFreeRoute: true, rampSlopeDegree: 4, elevatorWidthCm: 120, accessibleRooms: true, accessibleParking: true, accessibleToilet: true },
+      visual: { brailleSigns: true, tactilePaving: true, highContrastSignage: true },
+      auditory: { audioGuides: true, hearingLoop: true, vibrationAlerts: true },
+      cognitive: { quietZones: true, easyToReadSignage: true, consistentLayout: true },
+      support: { serviceAnimalFriendly: true, supportPersonPolicy: true, supportContact: "+998 79 220 11 00" }
+    },
+    familyAndElderly: { strollerAccessible: true, medicalServiceOnSite: true, orthopedicBeddingAvailable: true, grabBarsInBathroom: true },
+    atmosphere: {
+      mood: "Zamonaviy va qulay",
+      soundscape: "Sokin favvoralar va shahar xiyoboni",
+      bestTimeOfDay: "Kechqurun — xiyobon chiroqlari yoqilganda",
+      localTip: "Mehmonxona yonidagi Alisher Navoiy ko'li bo'ylab kechki sayrni o'tkazib yubormang."
+    },
+    nearbyPlaces: ["Alisher Navoiy nomidagi Milliy bog' (0.3 km)", "Navoiy viloyat o'lkashunoslik muzeyi (0.6 km)"],
+    rooms: [
+      { name: "Inklyuziv Deluxe", roomType: "Double Room", category: "Deluxe", capacity: 2, pricePerNight: 650000, roomsAvailable: 8, totalRooms: 16, areaSqMeters: 36, bedType: "king size", bathroomType: "private",
+        roomAccessibility: { hasEmergencyCord: true, grabBars: true, wideDoorways: true, visualAlarms: true, rollInShower: true } }
+    ],
+    paymentMethods: ["Click", "Payme", "Naqd", "Uzum Bank"],
+    approved: true
   }
 ];
 
@@ -385,6 +432,33 @@ const mockAttractions = [
     bestSeason: "Yil bo'yi",
     entryFee: "Bepul",
     rating: 4.4, reviewsCount: 0
+  },
+  // ── NAVOIY SHAHRI ──
+  {
+    name: "Alisher Navoiy nomidagi Milliy bog' va Ko'l",
+    district: "Navoiy shahri",
+    description: "Navoiy shahrining markaziy dam olish maskani. Ulkan sun'iy ko'l, sayr xiyobonlari, favvoralar va barcha qulayliklarga ega zamonaviy inklyuziv madaniyat bog'i.",
+    descriptionShort: "Shahar markazidagi go'zal sun'iy ko'l va sayilgoh.",
+    images: [
+      "https://images.unsplash.com/photo-1590060766050-3ef0d4a8f7a6?auto=format&fit=crop&q=80&w=1000"
+    ],
+    video360: { url: "https://www.youtube.com/watch?v=ZZyBG6UsvoQ", type: "youtube", captioned: true },
+    thingsToSeeAround: [
+      { title: "Navoiy teatri", description: "Viloyat musiqali drama teatri.", type: "tarix", walkingMinutes: 6 },
+      { title: "Yoshlar xiyoboni", description: "Zamonaviy favvoralar va dam olish maydoni.", type: "tabiat", walkingMinutes: 5 }
+    ],
+    location: { lat: 40.0982, lng: 65.3725 },
+    address: "Islom Karimov ko'chasi, Navoiy shahri",
+    accessibility: { wheelchairAccessible: true, accessibleParking: true, accessibleToilet: true, audioGuides: true, quietZones: true, serviceAnimalFriendly: true },
+    atmosphere: {
+      mood: "Zamonaviy va xushhavo",
+      soundscape: "Ko'l suvi shildirashi va favvoralar sadosi",
+      bestTimeOfDay: "Kechqurun — quyosh botishi va rangli favvoralar",
+      localTip: "Ko'l bo'ylab tungi yoritilgan yo'laklarda sayr qiling."
+    },
+    bestSeason: "Aprel–Noyabr",
+    entryFee: "Bepul",
+    rating: 4.9, reviewsCount: 0
   }
 ];
 

@@ -9,9 +9,10 @@ import mongoose from 'mongoose';
  */
 
 const DISTRICTS = [
-  'Navoiy shahri', 'Zarafshon shahri', 'G\'ozg\'on shahri',
-  'Karmana', 'Qiziltepa', 'Navbahor', 'Nurota', 
-  'Tomdi', 'Uchquduq', 'Xatirchi', 'Konimex'
+  'Navoiy shahri',
+  'Nurota',
+  'Xatirchi',
+  'Qiziltepa'
 ];
 
 // Tarixiy joyga qoldirilgan sharhlar (embedded)
@@ -25,9 +26,31 @@ const attractionReviewSchema = new mongoose.Schema({
 const attractionSchema = new mongoose.Schema({
   name:        { type: String, required: true },
   district:    { type: String, enum: DISTRICTS, required: true },
+  category: {
+    type: String,
+    enum: [
+      'tarixiy',
+      'madaniy',
+      'ziyoratgoh',
+      'tabiat',
+      'istirohat_bogi',
+      'kasalxona',
+      'iib',
+      'hokimiyat',
+      'transport',
+      'bozor',
+      'supermarket',
+      'mall',
+      'boshqa'
+    ],
+    default: 'tarixiy',
+  },
   description: String,
   descriptionShort: String,
   shortDescription: String,
+  phone: String,
+  workingHours: String,
+  emergencyContact: String,
 
   images: [String],
 
@@ -43,13 +66,12 @@ const attractionSchema = new mongoose.Schema({
     caption: String,
   }],
 
-  // ── "Atrofda aylanishga arzigulik nima bor" ──
   thingsToSeeAround: [{
     title:       { type: String, required: true },
     description: String,
     type: {
       type: String,
-      enum: ['tabiat', 'tarix', 'bozor', 'ovqat', 'diniy', 'boshqa'],
+      enum: ['tabiat', 'tarix', 'bozor', 'ovqat', 'ovqatlanish', 'diniy', 'boshqa'],
       default: 'boshqa',
     },
     walkingMinutes: Number,

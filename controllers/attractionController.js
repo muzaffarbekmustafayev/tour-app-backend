@@ -55,7 +55,7 @@ function sanitizeAttractionPayload(body) {
 
   // Atrofda aylanishga arzigulik nima bor (bo'sh qatorlar va noto'g'ri tiplardan tozalash)
   if (Array.isArray(body.thingsToSeeAround)) {
-    const VALID_TYPES = ['tabiat', 'tarix', 'bozor', 'ovqat', 'diniy', 'boshqa'];
+    const VALID_TYPES = ['tabiat', 'tarix', 'bozor', 'ovqat', 'ovqatlanish', 'diniy', 'boshqa'];
     payload.thingsToSeeAround = body.thingsToSeeAround
       .filter((t) => t && typeof t.title === 'string' && t.title.trim() !== '')
       .map((t) => ({
@@ -91,10 +91,17 @@ function sanitizeAttractionPayload(body) {
 
 // ── GET /api/attractions  (Public) ──
 export const getAllAttractions = asyncHandler(async (req, res) => {
-  const { district, search } = req.query;
+  const { district, category, search } = req.query;
   const query = { approved: true };
 
   if (district) query.district = new RegExp(`^${district}$`, 'i');
+  if (category && category !== 'all') {
+    if (category === 'savdo') {
+      query.category = { $in: ['bozor', 'supermarket', 'mall'] };
+    } else {
+      query.category = category;
+    }
+  }
   if (search) query.$text = { $search: search };
 
   const page  = Math.max(1, parseInt(req.query.page) || 1);

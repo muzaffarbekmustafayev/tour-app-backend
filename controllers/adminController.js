@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import Hotel from '../models/Hotel.js';
+import Attraction from '../models/Attraction.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { NotFoundError } from '../lib/errors.js';
 
@@ -39,15 +40,17 @@ export const blockUser = asyncHandler(async (req, res) => {
 
 export const getStatistics = asyncHandler(async (_req, res) => {
   // Parallel so'rovlar — N+1 emas
-  const [totalUsers, totalHotels, topHotels] = await Promise.all([
+  const [totalUsers, totalHotels, totalAttractions, topHotels] = await Promise.all([
     User.countDocuments(),
     Hotel.countDocuments(),
+    Attraction.countDocuments(),
     Hotel.find().sort('-rating').limit(5).select('name rating reviewsCount'),
   ]);
 
   res.json({
     totalUsers,
     totalHotels,
+    totalAttractions,
     totalVisitors: Math.floor(totalUsers * 12.5 + 42),
     topHotels,
   });
