@@ -7,7 +7,27 @@ import User from './models/User.js';
 
 dotenv.config();
 
-// ── 360 Video va Rasmlarsiz (rasmlar keyinchalik qo'lda yuklanadi) ──
+// ── Standart (Default) Rasmlar to'plami ──
+const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1564507592333-c60657eea523?auto=format&fit=crop&q=80&w=1000';
+
+const CATEGORY_DEFAULT_IMAGES = {
+  tarixiy: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?auto=format&fit=crop&q=80&w=1000',
+  ziyoratgoh: 'https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?auto=format&fit=crop&q=80&w=1000',
+  tabiat: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=1000',
+  istirohat_bogi: 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?auto=format&fit=crop&q=80&w=1000',
+  madaniy: 'https://images.unsplash.com/photo-1518998053901-5348d3961a04?auto=format&fit=crop&q=80&w=1000',
+  kasalxona: 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&q=80&w=1000',
+  iib: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&q=80&w=1000',
+  hokimiyat: 'https://images.unsplash.com/photo-1541888946425-d0fbb18015f6?auto=format&fit=crop&q=80&w=1000',
+  transport: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&q=80&w=1000',
+  bozor: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&q=80&w=1000',
+  supermarket: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&q=80&w=1000',
+  mall: 'https://images.unsplash.com/photo-1567449303078-57ad995bd301?auto=format&fit=crop&q=80&w=1000',
+  hotel: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1000',
+  resort: 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&q=80&w=1000',
+  guesthouse: 'https://images.unsplash.com/photo-1587061949409-02df41d5e562?auto=format&fit=crop&q=80&w=1000',
+  boutique: 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80&w=1000'
+};
 
 // 🏛️ 1. DIQQATGA SAZOVOR JOYLAR (35 ta)
 const ATTRACTIONS_1 = [
@@ -1171,7 +1191,7 @@ async function runImport() {
       atmosphere: item.atmosphere || {},
       peakInfo: item.peakInfo || {},
       video360: { url: '', type: 'youtube', captioned: false }, // 360 Video o'chirildi (bo'sh)
-      images: [], // Rasmlar bo'sh — keyinchalik qo'lda yuklanadi
+      images: [CATEGORY_DEFAULT_IMAGES[item.category] || DEFAULT_IMAGE],
       approved: true,
       createdBy: admin._id
     }));
@@ -1195,7 +1215,7 @@ async function runImport() {
       pricePerNight: h.basePricePerNight,
       amenities: h.amenities || ['Free WiFi', 'Parking'],
       accessibility: h.accessibility || {},
-      images: [], // Rasmlar bo'sh — keyinchalik qo'lda yuklanadi
+      images: [CATEGORY_DEFAULT_IMAGES[h.category] || DEFAULT_IMAGE],
       rating: 4.6,
       reviewsCount: 25,
       approved: true,
