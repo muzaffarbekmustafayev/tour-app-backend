@@ -105,7 +105,7 @@ export const getAllAttractions = asyncHandler(async (req, res) => {
   if (search) query.$text = { $search: search };
 
   const page  = Math.max(1, parseInt(req.query.page) || 1);
-  const limit = Math.min(50, parseInt(req.query.limit) || 12);
+  const limit = Math.min(200, parseInt(req.query.limit) || 100);
   const skip  = (page - 1) * limit;
 
   const [items, total] = await Promise.all([
