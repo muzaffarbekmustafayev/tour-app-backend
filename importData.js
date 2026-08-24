@@ -1145,12 +1145,12 @@ const HOTELS = [
 
 // 🚀 ASOSIY IMPORT AMALIYOTI 🚀
 async function runImport() {
-  const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/tour-app';
+  const uri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/navaitour';
   console.log('🔗 MongoDBga ulanmoqda:', uri);
 
   try {
     await mongoose.connect(uri);
-    console.log('✅ Ulanish o\'rnatildi!');
+    console.log(`✅ Ulanish o'rnatildi! (${mongoose.connection.name} bazasi)`);
 
     // 1. Admin va Owner foydalanuvchilarini tekshirish
     let admin = await User.findOne({ role: 'ADMIN' });
