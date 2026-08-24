@@ -7,69 +7,7 @@ import User from './models/User.js';
 
 dotenv.config();
 
-// ── Toifalar bo'yicha mos Unsplash rasmlar ──
-const IMAGES = {
-  tarixiy: [
-    'https://images.unsplash.com/photo-1564507592333-c60657eea523?auto=format&fit=crop&q=80&w=1000',
-    'https://images.unsplash.com/photo-1599818816949-34070a7b4097?auto=format&fit=crop&q=80&w=1000'
-  ],
-  ziyoratgoh: [
-    'https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?auto=format&fit=crop&q=80&w=1000',
-    'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1000'
-  ],
-  tabiat: [
-    'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=1000',
-    'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=1000'
-  ],
-  istirohat_bogi: [
-    'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?auto=format&fit=crop&q=80&w=1000',
-    'https://images.unsplash.com/photo-1473448912268-2022ce9509d8?auto=format&fit=crop&q=80&w=1000'
-  ],
-  madaniy: [
-    'https://images.unsplash.com/photo-1518998053901-5348d3961a04?auto=format&fit=crop&q=80&w=1000',
-    'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?auto=format&fit=crop&q=80&w=1000'
-  ],
-  kasalxona: [
-    'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&q=80&w=1000',
-    'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=1000'
-  ],
-  iib: [
-    'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&q=80&w=1000',
-    'https://images.unsplash.com/photo-1589578527966-fdac0f44566c?auto=format&fit=crop&q=80&w=1000'
-  ],
-  hokimiyat: [
-    'https://images.unsplash.com/photo-1541888946425-d0fbb18015f6?auto=format&fit=crop&q=80&w=1000',
-    'https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&q=80&w=1000'
-  ],
-  transport: [
-    'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&q=80&w=1000',
-    'https://images.unsplash.com/photo-1474487548417-781cb71495f3?auto=format&fit=crop&q=80&w=1000'
-  ],
-  bozor: [
-    'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&q=80&w=1000',
-    'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?auto=format&fit=crop&q=80&w=1000'
-  ],
-  supermarket: [
-    'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&q=80&w=1000',
-    'https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&q=80&w=1000'
-  ],
-  mall: [
-    'https://images.unsplash.com/photo-1567449303078-57ad995bd301?auto=format&fit=crop&q=80&w=1000',
-    'https://images.unsplash.com/photo-1519567241046-7f570eee3ce6?auto=format&fit=crop&q=80&w=1000'
-  ],
-  hotel: [
-    'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1000'
-  ],
-  resort: [
-    'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&q=80&w=1000'
-  ],
-  guesthouse: [
-    'https://images.unsplash.com/photo-1587061949409-02df41d5e562?auto=format&fit=crop&q=80&w=1000'
-  ],
-  boutique: [
-    'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80&w=1000'
-  ]
-};
+// ── 360 Video va Rasmlarsiz (rasmlar keyinchalik qo'lda yuklanadi) ──
 
 // 🏛️ 1. DIQQATGA SAZOVOR JOYLAR (35 ta)
 const ATTRACTIONS_1 = [
@@ -1233,7 +1171,7 @@ async function runImport() {
       atmosphere: item.atmosphere || {},
       peakInfo: item.peakInfo || {},
       video360: { url: '', type: 'youtube', captioned: false }, // 360 Video o'chirildi (bo'sh)
-      images: IMAGES[item.category] || IMAGES.tarixiy,
+      images: [], // Rasmlar bo'sh — keyinchalik qo'lda yuklanadi
       approved: true,
       createdBy: admin._id
     }));
@@ -1257,7 +1195,7 @@ async function runImport() {
       pricePerNight: h.basePricePerNight,
       amenities: h.amenities || ['Free WiFi', 'Parking'],
       accessibility: h.accessibility || {},
-      images: IMAGES[h.category] || IMAGES.hotel,
+      images: [], // Rasmlar bo'sh — keyinchalik qo'lda yuklanadi
       rating: 4.6,
       reviewsCount: 25,
       approved: true,
