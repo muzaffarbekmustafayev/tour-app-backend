@@ -228,7 +228,7 @@ export const getAllHotels = asyncHandler(async (req, res) => {
   const sort = { [sortField]: sortDir };
 
   const page  = Math.max(1, parseInt(req.query.page)  || 1);
-  const limit = Math.min(50, parseInt(req.query.limit) || 12);
+  const limit = Math.min(200, parseInt(req.query.limit) || 100);
   const skip  = (page - 1) * limit;
 
   const [hotels, total] = await Promise.all([
