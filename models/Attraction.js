@@ -71,7 +71,7 @@ const attractionSchema = new mongoose.Schema({
     description: String,
     type: {
       type: String,
-      enum: ['tabiat', 'tarix', 'bozor', 'ovqat', 'ovqatlanish', 'diniy', 'boshqa'],
+      enum: ['tabiat', 'tarix', 'bozor', 'ovqat', 'ovqatlanish', 'diniy', 'madaniy', 'istirohat_bogi', 'ziyoratgoh', 'boshqa'],
       default: 'boshqa',
     },
     walkingMinutes: Number,
