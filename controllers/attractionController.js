@@ -144,19 +144,24 @@ export const getAttractionById = asyncHandler(async (req, res) => {
 });
 
 // ── GET /api/attractions/:id/nearby-stays  (Public) ──
-// Joyga 10 km radiusdagi barcha tasdiqlangan Hotellar, masofa bo'yicha tartib.
+// Joyga eng yaqin Hotellar va boshqa diqqatga sazovor joylar, masofa bo'yicha tartiblangan.
 export const getNearbyStays = asyncHandler(async (req, res) => {
-  const attraction = await Attraction.findById(req.params.id).select('location geo district');
+  const attraction = await Attraction.findById(req.params.id).select('location geo district category name');
   if (!attraction) throw new NotFoundError('Tarixiy joy topilmadi');
 
   const lat = attraction.location?.lat ?? attraction.geo?.coordinates?.[1];
   const lng = attraction.location?.lng ?? attraction.geo?.coordinates?.[0];
 
-  const hotels = await Hotel.find({ approved: true }).select('-owner').lean();
+  const [hotels, allAttractions] = await Promise.all([
+    Hotel.find({ approved: true }).select('-owner').lean(),
+    Attraction.find({ approved: true, _id: { $ne: attraction._id } }).select('name district category images descriptionShort location geo rating').lean(),
+  ]);
 
-  let result;
+  let result = [];
+  let nearbyAttractions = [];
+
   if (Number.isFinite(lat) && Number.isFinite(lng)) {
-    result = hotels
+    const withDistance = hotels
       .map((h) => {
         const hLat = h.location?.lat ?? h.geo?.coordinates?.[1];
         const hLng = h.location?.lng ?? h.geo?.coordinates?.[0];
@@ -164,21 +169,52 @@ export const getNearbyStays = asyncHandler(async (req, res) => {
         const distanceKm = haversineKm(lat, lng, hLat, hLng);
         return { ...h, distanceKm: Math.round(distanceKm * 10) / 10 };
       })
-      .filter((h) => h && h.distanceKm <= NEARBY_RADIUS_KM)
+      .filter(Boolean)
       .sort((a, b) => a.distanceKm - b.distanceKm);
+
+    // Dastlab 15 km radiusda qidiramiz
+    const within15Km = withDistance.filter((h) => h.distanceKm <= 15);
+    if (within15Km.length > 0) {
+      result = within15Km;
+    } else {
+      // 15 km da bo'lmasa, eng yaqin 4 ta mehmonxonani tavsiya qilamiz
+      result = withDistance.slice(0, 4);
+    }
+
+    // Yaqin boshqa tarixiy/madaniy joylar (25 km gacha yoki eng yaqin 4 ta)
+    nearbyAttractions = allAttractions
+      .map((a) => {
+        const aLat = a.location?.lat ?? a.geo?.coordinates?.[1];
+        const aLng = a.location?.lng ?? a.geo?.coordinates?.[0];
+        if (!Number.isFinite(aLat) || !Number.isFinite(aLng)) return null;
+        const distanceKm = haversineKm(lat, lng, aLat, aLng);
+        return { ...a, distanceKm: Math.round(distanceKm * 10) / 10 };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+      .slice(0, 4);
   } else {
-    // Koordinata yo'q bo'lsa — bir xil tumandagi maskanlarga qaytamiz
+    // Koordinata bo'lmasa — bir xil tumandagi maskanlar
     const targetDistrict = (attraction.district || '').toLowerCase();
     result = hotels.filter((h) => 
       (h.district && h.district.toLowerCase() === targetDistrict) || 
       (h.city && h.city.toLowerCase() === targetDistrict)
     );
+    nearbyAttractions = allAttractions
+      .filter((a) => (a.district || '').toLowerCase() === targetDistrict)
+      .slice(0, 4);
   }
 
-  // Eng yaqin tunash joyi (masofa bo'yicha birinchi) — frontend uni avtomatik tanlaydi
+  // Eng yaqin tunash joyi
   const nearest = result[0] || null;
 
-  res.json({ data: result, nearest, radiusKm: NEARBY_RADIUS_KM, total: result.length });
+  res.json({
+    data: result,
+    nearest,
+    nearbyAttractions,
+    radiusKm: NEARBY_RADIUS_KM,
+    total: result.length,
+  });
 });
 
 // ── POST /api/attractions  (Admin) ──
