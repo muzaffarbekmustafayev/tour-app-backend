@@ -91,18 +91,38 @@ function sanitizeAttractionPayload(body) {
 
 // ── GET /api/attractions  (Public) ──
 export const getAllAttractions = asyncHandler(async (req, res) => {
-  const { district, category, search } = req.query;
+  const { district, category, search, includeUtility } = req.query;
   const query = { approved: true };
 
   if (district) query.district = new RegExp(`^${district}$`, 'i');
+
+  const UTILITY_CATEGORIES = ['kasalxona', 'iib', 'hokimiyat', 'transport', 'boshqa'];
+
   if (category && category !== 'all') {
     if (category === 'savdo') {
       query.category = { $in: ['bozor', 'supermarket', 'mall'] };
+    } else if (category === 'infratuzilma' || category === 'xizmatlar') {
+      query.category = { $in: UTILITY_CATEGORIES };
     } else {
       query.category = category;
     }
+  } else if (!search && includeUtility !== 'true' && includeUtility !== true) {
+    // Foydalanuvchi asosiy sahifa yoki umumiy ro'yxatga kirganda — faqat sayohat, hordiq chiqarish va diqqatga sazovor joylar chiqadi.
+    // IIB, tez yordam/kasalxona, davlat xizmati/hokimiyat 2-darajali bo'lib, faqat qidirilganda yoki tegishli toifa tanlanganda chiqadi.
+    query.category = { $nin: UTILITY_CATEGORIES };
   }
-  if (search) query.$text = { $search: search };
+
+  if (search && search.trim()) {
+    const searchRegex = new RegExp(search.trim(), 'i');
+    query.$or = [
+      { name: searchRegex },
+      { description: searchRegex },
+      { descriptionShort: searchRegex },
+      { address: searchRegex },
+      { category: searchRegex },
+      { 'thingsToSeeAround.title': searchRegex },
+    ];
+  }
 
   const page  = Math.max(1, parseInt(req.query.page) || 1);
   const limit = Math.min(200, parseInt(req.query.limit) || 100);
