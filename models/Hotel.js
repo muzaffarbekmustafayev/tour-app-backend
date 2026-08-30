@@ -13,7 +13,6 @@ const roomSchema = new mongoose.Schema({
     default: 'Standard'
   },
   capacity: { type: Number, default: 2 },
-  pricePerNight: { type: Number, default: 500000 },
   roomsAvailable: { type: Number, default: 1 },
   totalRooms: { type: Number, default: 1 },
   areaSqMeters: Number,
@@ -93,8 +92,6 @@ const hotelSchema = new mongoose.Schema({
   },
   category: { type: String, enum: ['hotel', 'resort', 'hostel', 'boutique', 'motel', 'guesthouse'] },
   stars: { type: Number, min: 1, max: 5 },
-  basePricePerNight: Number,   // Ma'lumotnoma narxi
-  pricePerNight: Number,
   roomsAvailable: Number,
   totalRooms: Number,
   maxGuests: Number,
@@ -214,7 +211,7 @@ hotelSchema.index({ 'accessibility.cognitive.quietZones': 1 });
 hotelSchema.index({ 'accessibility.support.serviceAnimalFriendly': 1 });
 hotelSchema.index({ 'familyAndElderly.strollerAccessible': 1 });
 hotelSchema.index({ 'digitalInclusion.offlineDataSupport': 1 });
-hotelSchema.index({ city: 1, stars: 1, basePricePerNight: 1 });
+hotelSchema.index({ city: 1, stars: 1 });
 hotelSchema.index({ district: 1 });
 // Eslatma: yaqin maskanlar Haversine (location lat/lng) bilan hisoblanadi,
 // shu sababli 2dsphere indeks shart emas — koordinatasiz hujjatlarda

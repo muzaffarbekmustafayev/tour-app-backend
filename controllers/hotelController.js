@@ -75,13 +75,12 @@ function normalizeAccessibility(acc) {
   };
 }
 
-function normalizeRooms(body, basePrice) {
+function normalizeRooms(body) {
   const rawRooms = Array.isArray(body.rooms) && body.rooms.length > 0 ? body.rooms : [{
     name: 'Standart Xona',
     roomType: 'Double Room',
     category: 'Standard',
     capacity: 2,
-    pricePerNight: basePrice,
     totalRooms: Number(body.roomsAvailable || body.totalRooms) || 1,
     roomsAvailable: Number(body.roomsAvailable || body.totalRooms) || 1,
   }];
@@ -91,7 +90,6 @@ function normalizeRooms(body, basePrice) {
     const category = r.category || 'Standard';
     const totalRooms = Math.max(1, Number(r.totalRooms) || 1);
     const roomsAvailable = Number(r.roomsAvailable !== undefined && r.roomsAvailable !== '' ? r.roomsAvailable : totalRooms) || totalRooms;
-    const pricePerNight = Number(r.pricePerNight !== undefined && r.pricePerNight !== '' ? r.pricePerNight : basePrice) || basePrice;
     const name = r.name?.trim() || `${capacity} kishilik ${category}`;
     return {
       ...r,
@@ -99,7 +97,6 @@ function normalizeRooms(body, basePrice) {
       roomType: r.roomType || 'Double Room',
       category,
       capacity,
-      pricePerNight,
       totalRooms,
       roomsAvailable,
     };
@@ -107,7 +104,6 @@ function normalizeRooms(body, basePrice) {
 }
 
 function sanitizeHotelPayload(body) {
-  const basePrice = Number(body.basePricePerNight || body.pricePerNight) || 500000;
   const payload = { ...body };
 
   if (body.images) {
@@ -125,8 +121,6 @@ function sanitizeHotelPayload(body) {
   if (body.checkInTime && !body.checkIn) payload.checkIn = body.checkInTime;
   if (body.checkOutTime && !body.checkOut) payload.checkOut = body.checkOutTime;
 
-  payload.basePricePerNight = basePrice;
-  payload.pricePerNight = basePrice;
   if (body.roomsAvailable !== undefined && body.roomsAvailable !== '') {
     payload.roomsAvailable = Number(body.roomsAvailable);
   }
@@ -140,7 +134,7 @@ function sanitizeHotelPayload(body) {
   const normalizedAcc = normalizeAccessibility(body.accessibility);
   if (normalizedAcc) payload.accessibility = normalizedAcc;
 
-  payload.rooms = normalizeRooms(body, basePrice);
+  payload.rooms = normalizeRooms(body);
 
   const geoData = normalizeGeo(body);
   if (geoData.location) payload.location = geoData.location;
@@ -174,7 +168,7 @@ const ACC_MAP = {
 };
 
 export const getAllHotels = asyncHandler(async (req, res) => {
-  const { city, district, stars, minPrice, maxPrice, category, search, minRating } = req.query;
+  const { city, district, stars, category, search, minRating } = req.query;
 
   const query = { approved: true };
 
@@ -208,12 +202,6 @@ export const getAllHotels = asyncHandler(async (req, res) => {
   if (category) query.category = category;
   if (minRating) query.rating  = { $gte: Number(minRating) };
 
-  if (minPrice || maxPrice) {
-    query.basePricePerNight = {};
-    if (minPrice) query.basePricePerNight.$gte = Number(minPrice);
-    if (maxPrice) query.basePricePerNight.$lte = Number(maxPrice);
-  }
-
   if (search) query.$text = { $search: search };
 
   // Accessibility filtrlari
@@ -222,7 +210,7 @@ export const getAllHotels = asyncHandler(async (req, res) => {
   }
 
   // Saralash — masalan ?sortBy=rating&order=desc (AIRecommendations buni ishlatadi)
-  const SORT_FIELDS = { rating: 'rating', price: 'basePricePerNight', createdAt: 'createdAt' };
+  const SORT_FIELDS = { rating: 'rating', createdAt: 'createdAt' };
   const sortField = SORT_FIELDS[req.query.sortBy] || 'createdAt';
   const sortDir = req.query.order === 'asc' ? 1 : -1;
   const sort = { [sortField]: sortDir };

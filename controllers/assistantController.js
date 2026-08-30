@@ -13,7 +13,7 @@ import Attraction from '../models/Attraction.js';
  *   • Kundalik suhbat (salom, rahmat, qalaysiz, xayr)
  *   • "Nima qila olasan?"  → imkoniyatlar ro'yxati
  *   • Platforma FAQ        → bron, ro'yxat, to'lov, bekor qilish qanday ishlaydi
- *   • Narx / byudjet       → arzon/qimmat, "500 ming gacha", narx oralig'i
+ *   • Qulayliklar          → Wi-Fi, restoran, parking, konditsioner, gulxan…
  *   • Qulayliklar          → Wi-Fi, restoran, parking, konditsioner, gulxan…
  *   • Yulduzlar            → "4 yulduzli mehmonxona"
  *   • To'lov usullari      → Click / Payme / Naqd / Uzum
@@ -25,7 +25,7 @@ import Attraction from '../models/Attraction.js';
  *   • Pik / tinch vaqt     → joyga qachon borish yaxshi (gavjum/tinch + mavsum)
  *   • Tarixiy joylar       → tuman bo'yicha joylar + eng yaqin tunash maskani
  *   • Atrofda nima bor     → ovqat, bozor, tabiat (thingsToSeeAround)
- *   • Statistika           → nechta maskan/joy, narx oralig'i, tumanlar
+ *   • Statistika           → nechta maskan/joy, tumanlar
  *   • N kunlik plan        → N-kunlik sayohat rejasi
  *   • Inklyuziv so'rov     → aravacha/ko'rish/eshitish/keksalar uchun moslar
  *   • Nom bo'yicha         → aniq maskan/joy haqida batafsil (entity lookup)
@@ -59,9 +59,7 @@ const applySynonyms = (t) =>
     .replace(/\b(tarixi|tarihiy|tarxiy|tarixy)\b/g, 'tarixiy')
     .replace(/\b(gavjum|gavjumi|gavjummi|tig'iz|tigiz|tirband|tirbandlik|qalaba|olomon|navbat|band)\b/g, 'pik')
     .replace(/\b(qulayli|qulayrok|qulayroq)\b/g, 'qulay')
-    .replace(/\b(aravacha|kolyaska|invalid|nogiron)\b/g, 'aravacha')
-    .replace(/\b(narxi|narxlari|narhi|narx)\b/g, 'narx')
-    .replace(/\b(byujet|budjet|budget|byudget)\b/g, 'byudjet')
+    .replace(/\b(arayvacha|kolyaska|invalid|nogiron)\b/g, 'aravacha')
     .replace(/\b(vayfay|vay-fay|vifi|wi-fi)\b/g, 'wifi')
     .replace(/\b(avtoturargoh|avtoturgoh|turargoh|mashina joyi|mashinajoy)\b/g, 'parking')
     .replace(/\b(konditsioner|konditsion|sovutgich|kanditsioner)\b/g, 'konditsioner')
@@ -75,28 +73,6 @@ const applySynonyms = (t) =>
     .replace(/\b(markaz|gorod|sentr|center)\b/g, 'markaz')
     .replace(/\b(aeroport|ayraport|tayyora)\b/g, 'aeroport')
     .replace(/\b(vokzal|vaxzal|stansiya|poezd)\b/g, 'vokzal');
-
-// ── Pul formatlash: 720000 → "720 000 so'm" ──────────────────────────
-const fmtSom = (n) =>
-  Number.isFinite(n) ? `${Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} so'm` : null;
-
-// Maskanning eng arzon xona narxi (rooms yo'q bo'lsa — basePricePerNight)
-const cheapestPrice = (h) => {
-  const prices = (h.rooms || []).map((r) => r.pricePerNight).filter(Number.isFinite);
-  if (prices.length) return Math.min(...prices);
-  return Number.isFinite(h.basePricePerNight) ? h.basePricePerNight : null;
-};
-
-// Matndan byudjet sonini ajratish: "500 ming"→500000, "1 mln"→1000000, "350000"→350000
-function extractBudget(text) {
-  const m1 = text.match(/(\d+(?:[.,]\d+)?)\s*(mln|million|mil)/);
-  if (m1) return Math.round(parseFloat(m1[1].replace(',', '.')) * 1_000_000);
-  const m2 = text.match(/(\d+(?:[.,]\d+)?)\s*ming/);
-  if (m2) return Math.round(parseFloat(m2[1].replace(',', '.')) * 1000);
-  const m3 = text.match(/(\d{4,})/); // 4+ raqamli xom son
-  if (m3) return parseInt(m3[1], 10);
-  return null;
-}
 
 // Ikki koordinata orasidagi masofa (km) — Haversine
 function haversineKm(lat1, lng1, lat2, lng2) {
@@ -160,7 +136,6 @@ const toHotelCard = (h) => ({
   district: h.district || h.city,
   rating: h.rating,
   stars: h.stars,
-  price: cheapestPrice(h),
   image: h.images?.[0] || null,
   category: h.category,
   descriptionShort: h.descriptionShort || '',
@@ -186,7 +161,7 @@ const toAttractionCard = (a) => {
   };
 };
 
-const SUGGESTIONS = ['Tarixiy joylar', 'Arzon mehmonxona', 'Bepul Wi-Fi bormi?', '3 kunlik plan yoz'];
+const SUGGESTIONS = ['Tarixiy joylar', 'Tinch joylar', 'Bepul Wi-Fi bormi?', '3 kunlik plan yoz'];
 
 // Inklyuziv (nogironlar uchun) moslik tekshiruvi — Hotel
 const isAccessible = (h, kind) => {
@@ -232,11 +207,6 @@ function extractConstraints(text) {
   const c = { signals: 0, amenities: [] };
 
   c.district = DISTRICTS.find((d) => text.includes(d.toLowerCase())) || null; // kuchsiz signal
-
-  const budget = extractBudget(text);
-  if (budget && /gacha|kam|byudjet|ichida|oshma|atrofida|arzon/.test(text)) { c.maxPrice = budget; c.signals++; }
-  else if (/arzon|tejamkor|eng arzon/.test(text)) { c.cheapest = true; c.signals++; }
-  else if (/qimmat|hashamatli|eng qimmat/.test(text)) { c.expensive = true; c.signals++; }
 
   const sm = text.match(/([1-5])\s*yulduz/);
   if (sm) { c.exactStars = parseInt(sm[1], 10); c.signals++; }
@@ -292,11 +262,8 @@ function applyConstraints(hotels, c) {
   if (c.language) list = list.filter((h) => (h.languages || []).some((l) => l.toLowerCase().includes(c.language)));
 
   if (c.payment) list = list.filter((h) => (h.paymentMethods || []).some((p) => p.toLowerCase().includes(c.payment)));
-  if (Number.isFinite(c.maxPrice)) list = list.filter((h) => { const p = cheapestPrice(h); return p != null && p <= c.maxPrice; });
 
-  if (c.cheapest || Number.isFinite(c.maxPrice)) list.sort((a, b) => (cheapestPrice(a) ?? 1e12) - (cheapestPrice(b) ?? 1e12));
-  else if (c.expensive) list.sort((a, b) => (cheapestPrice(b) ?? 0) - (cheapestPrice(a) ?? 0));
-  else list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+  list.sort((a, b) => (b.rating || 0) - (a.rating || 0));
   return list;
 }
 
@@ -317,9 +284,6 @@ function describeConstraints(c) {
   else if (c.distance === 'trainStation') parts.push('vokzalga yaqin');
   if (c.language) parts.push(`${c.language === 'rus' ? 'Rus' : 'Ingliz'} tilida`);
   if (c.payment) parts.push(c.payment[0].toUpperCase() + c.payment.slice(1));
-  if (Number.isFinite(c.maxPrice)) parts.push(`${fmtSom(c.maxPrice)} gacha`);
-  else if (c.cheapest) parts.push('arzon');
-  else if (c.expensive) parts.push('hashamatli');
   return parts.join(' · ');
 }
 
@@ -435,8 +399,6 @@ function hotelDetailText(h) {
   const meta = [];
   if (Number.isFinite(h.stars)) meta.push(`⭐ ${h.stars} yulduz`);
   if (Number.isFinite(h.rating) && h.rating > 0) meta.push(`📊 reyting ${h.rating.toFixed?.(1) ?? h.rating}`);
-  const price = cheapestPrice(h);
-  if (price) meta.push(`💰 ${fmtSom(price)} dan/kecha`);
   if (meta.length) lines.push('', meta.join('  ·  '));
   if (h.address || h.district || h.city) lines.push(`📍 ${[h.address, h.district || h.city].filter(Boolean).join(', ')}`);
   if (h.checkIn || h.checkOut) lines.push(`🕑 Kirish: ${h.checkIn || '—'} · Chiqish: ${h.checkOut || '—'}`);
@@ -506,7 +468,6 @@ export const askAssistant = asyncHandler(async (req, res) => {
       reply:
         "Men quyidagilar bo'yicha yordam beraman 👇\n" +
         "• 🏛️ Tarixiy joylar va ularga eng yaqin tunash maskani\n" +
-        "• 💰 Narx / byudjet — \"arzon\", \"500 ming gacha\"\n" +
         "• ✨ Qulayliklar — Wi-Fi, restoran, parking, konditsioner…\n" +
         "• ⭐ Yulduz bo'yicha — \"4 yulduzli mehmonxona\"\n" +
         "• 💳 To'lov usullari — Click / Payme / Naqd\n" +
@@ -530,7 +491,7 @@ export const askAssistant = asyncHandler(async (req, res) => {
   if (/transport|poezd|avtobus|samolyot|aeroport|qanday bor|yetib bor|taksi/.test(text)) {
     return res.json({
       reply: "Transport 🚆✈️\nNavoiy shahriga Toshkentdan yoki boshqa viloyatlardan «Afrosiyob» tezyurar poyezdi, samolyot (Navoiy xalqaro aeroporti) yoki avtobus/taksi orqali qulay yetib olish mumkin. Viloyat ichida esa taksi va mikroavtobuslar qatnaydi.",
-      suggestions: ['Navoiy haqida', 'Arzon mehmonxona']
+      suggestions: ['Navoiy haqida', 'Tinch joylar']
     });
   }
   if (/taom|ovqat|milliy|osh|somsa|tandir|shashlik|nima yey|suvenir|sovg'a|sovga/.test(text)) {
@@ -869,6 +830,50 @@ export const askAssistant = asyncHandler(async (req, res) => {
       if (h.atmosphere?.localTip) lines.push(`   💡 ${h.atmosphere.localTip}`);
     }
     return res.json({ reply: lines.join('\n'), hotels: list.slice(0, 3).map(toHotelCard) });
+  }
+
+  // ── 10.5) RASMGA TUSHISH / MANZARA / INSTAGRAM ───────────────────
+  if (/rasmga|manzara|chiroyli|instagram|surat|foto/.test(text)) {
+    const pool = attractionPool.length ? attractionPool : attractions;
+    const list = pool.filter(a => a.images?.length > 0 || (a.descriptionShort || '').toLowerCase().includes('manzara')).sort((a,b) => (b.rating || 0) - (a.rating || 0));
+    const top = list.length ? list.slice(0, 3) : pool.slice(0, 3);
+    const lines = [`📸 Rasmga tushish va chiroyli manzara uchun tavsiyalar${mentionedDistrict ? ` (${mentionedDistrict})` : ''}:`, ''];
+    for (const a of top) {
+      lines.push(`🏛️ ${a.name}`);
+      if (a.descriptionShort) lines.push(`   ✨ ${a.descriptionShort}`);
+      lines.push(`   🌅 Tavsiya: Eng chiroyli kadrlar uchun erta tongda yoki quyosh botishi paytida (Golden hour) boring.`);
+    }
+    return res.json({ reply: lines.join('\n'), attractions: top.map(toAttractionCard) });
+  }
+
+  // ── 10.6) SPORT / EKSTREMAL / SARGUZASHT ─────────────────────────
+  if (/sport|faol|ekstremal|sarguzasht|tog'ga chiq|piyoda yurish|yurish|hiking|trekking/.test(text)) {
+    const pool = attractionPool.length ? attractionPool : attractions;
+    const lines = [`🧗 Faol hordiq va sarguzasht izlovchilar uchun${mentionedDistrict ? ` (${mentionedDistrict})` : ''}:`, ''];
+    const top = pool.filter(a => /tog'|cho'l|ko'l|daryo|tabiat|cho'qqi|yurish/.test((a.description || '').toLowerCase())).slice(0, 3);
+    const results = top.length ? top : pool.slice(0, 2);
+    for (const a of results) {
+      lines.push(`🏞️ ${a.name}`);
+      lines.push(`   💡 ${a.atmosphere?.localTip || 'Piyoda yurish uchun qulay poyabzal va suv olishni unutmang.'}`);
+    }
+    return res.json({ reply: lines.join('\n'), attractions: results.map(toAttractionCard) });
+  }
+
+  // ── 10.7) OILAVIY / BOLALAR BILAN SAYOHAT ────────────────────────
+  if (/oila|bolalar|farzand|kichkina|oilaviy/.test(text) && !/xona|nomer/.test(text)) {
+    const hPool = hotelPool.filter(h => h.familyAndElderly?.strollerAccessible || (h.rooms || []).some(r => r.roomType === 'Family Room'));
+    const aPool = attractionPool.length ? attractionPool : attractions;
+    const safeAttractions = aPool.filter(a => !/tog'|xavfli|ekstremal/.test((a.description || '').toLowerCase())).slice(0, 2);
+    
+    const lines = [`👨‍👩‍👧‍👦 Bolalar bilan oilaviy sayohat uchun tavsiyalar${mentionedDistrict ? ` (${mentionedDistrict})` : ''}:`, ''];
+    lines.push('🏛️ Qulay borish mumkin bo\'lgan joylar:');
+    for (const a of safeAttractions) lines.push(`   • ${a.name} (Oila bilan sayr qilishga mos)`);
+    
+    if (hPool.length) {
+      lines.push('', '🛏️ Oilaviy xonalari bor va bolalar uchun qulay maskanlar:');
+      for (const h of hPool.slice(0, 2)) lines.push(`   🏨 ${h.name}`);
+    }
+    return res.json({ reply: lines.join('\n'), hotels: hPool.slice(0, 2).map(toHotelCard), attractions: safeAttractions.map(toAttractionCard) });
   }
 
   // ── 11) PIK / TINCH VAQT ─────────────────────────────────────────
